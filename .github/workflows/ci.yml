@@ -1,4 +1,6 @@
+# .github/workflows/ci.yml
 name: CI
+
 on:
   push:
     branches: [ main ]
@@ -8,6 +10,7 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,15 +22,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-         python -m venv .venv
-         .venv/bin/pip install --upgrade pip wheel setuptools
-         .venv/bin/pip install pre-commit pytest flake8 black isort
+          pip install --upgrade pip wheel setuptools
+          pip install pre-commit pytest flake8 black isort
+
       - name: Install pre-commit hooks
-        run: .venv/bin/pre-commit install
+        run: pre-commit install --install-hooks
 
       - name: Run linters and format checks
-        run: .venv/bin/pre-commit run --all-files
+        run: pre-commit run --all-files
 
       - name: Run tests
-        run: .venv/bin/pytest --disable-warnings -q
+        run: pytest --disable-warnings -q
 
