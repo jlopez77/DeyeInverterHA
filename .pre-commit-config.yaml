@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.1.0
+    hooks:
+      - id: black
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+
+  - repo: local
+    hooks:
+      - id: flake8
+        name: flake8 (system)
+        entry: flake8
+        language: system
+        types: [python]
+        args: ["--max-line-length=88", "--ignore=E203,W503,E501"]
+
+# Por ahora comentamos mypy para seguir adelante:
+#  - repo: https://github.com/pre-commit/mirrors-mypy
+#    rev: v1.5.1
+#    hooks:
+#      - id: mypy
+#        args: ["--ignore-missing-imports"]
+

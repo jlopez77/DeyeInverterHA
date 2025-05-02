@@ -1,0 +1,13 @@
+# Entorno virtual
+.venv/
+
+# Caché de Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Logs, cobertura, editor
+*.log
+.pytest_cache/
+.vscode/
+.idea/
