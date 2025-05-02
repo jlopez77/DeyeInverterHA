@@ -1,14 +1,16 @@
 """DataUpdateCoordinator para Deye Inverter."""
+
 import logging
 from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .InverterData import InverterData
 from .const import DEFAULT_SCAN_INTERVAL
+from .InverterData import InverterData
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
     """Coordinador que consulta periódicamente el inversor."""
@@ -48,9 +50,10 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
         - Si es el primer fetch y falla, devolvemos {} para que self.data sea un dict vacío.
         """
         try:
-            new_data = await self.hass.async_add_executor_job(self.client.read_real_time)
+            new_data = await self.hass.async_add_executor_job(
+                self.client.read_real_time
+            )
             return new_data or {}
         except Exception as err:
             _LOGGER.error("Error al leer inversor, manteniendo últimos datos: %s", err)
             return self.data if isinstance(self.data, dict) else {}
-

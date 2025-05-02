@@ -1,7 +1,8 @@
-import socket
 import binascii
 import json
 import os
+import socket
+
 
 def twos_complement_hex(hexval: str) -> int:
     """Interpreta un valor hex como entero con complemento a dos (16 bits)."""
@@ -10,6 +11,7 @@ def twos_complement_hex(hexval: str) -> int:
     if val & (1 << (bits - 1)):
         val -= 1 << bits
     return val
+
 
 def crc16_modbus(data: bytes) -> int:
     """Calcula el CRC-16 Modbus de un bloque de bytes."""
@@ -22,6 +24,7 @@ def crc16_modbus(data: bytes) -> int:
             else:
                 crc >>= 1
     return crc
+
 
 class InverterData:
     """Clase para leer datos en tiempo real de un inversor Deye vía Modbus/TCP."""
@@ -124,4 +127,3 @@ class InverterData:
                             break
 
         return data_map
-
