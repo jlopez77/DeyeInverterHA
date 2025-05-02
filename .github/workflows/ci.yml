@@ -1,5 +1,4 @@
 name: CI
-
 on:
   push:
     branches: [ main ]
@@ -20,10 +19,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m venv .venv
-          .venv/bin/pip install --upgrade pip wheel setuptools
-          .venv/bin/pip install pre-commit pytest
-
+         python -m venv .venv
+         .venv/bin/pip install --upgrade pip wheel setuptools
+         .venv/bin/pip install pre-commit pytest flake8 black isort
       - name: Install pre-commit hooks
         run: .venv/bin/pre-commit install
 
