@@ -64,7 +64,6 @@ El componente **Deye Inverter** te permite leer en tiempo real los datos de inve
 
 ### Dashboard Lovelace
 
-```yaml
 type: entities
 title: Deye Inverter Overview
 show_header_toggle: false
@@ -83,3 +82,58 @@ entities:
   - attribute: “DC Temperature”
     entity: sensor.deye_inverter_power
     name: Temp. DC (ºC)
+
+Energy Dashboard
+En Ajustes → Panel de Energía, añade:
+
+Solar Production: fuente → sensor.deye_inverter_power.
+
+Import: fuente → sensor.deye_inverter_power (Power → energía acumulada).
+
+Export: igual, usando el atributo Daily Energy Sold.
+
+Template Sensor
+Si quieres un template simple, p.ej. cálculo de consumo real:
+
+yaml
+Copiar
+Editar
+template:
+  - sensor:
+      - name: Consumo Real
+        unit_of_measurement: W
+        state: >-
+          {% set prod = state_attr('sensor.deye_inverter_power','Total PV Power')|float(0) %}
+          {% set grid = state_attr('sensor.deye_inverter_power','Total Grid Power')|float(0) %}
+          {{ prod - grid }}
+Desarrollo y calidad (Bronze)
+Pre-commit (Black, isort, Flake8, mypy)
+bash
+Copiar
+Editar
+# Instalar
+pip install pre-commit black isort flake8 mypy
+
+# Inicializar
+pre-commit install
+
+# En cada commit se aplicarán formateo y checks
+Tests
+bash
+Copiar
+Editar
+pip install pytest pytest-homeassistant-custom-component
+pytest --disable-warnings -q
+El test básico (tests/test_config_flow.py) verifica el flujo de configuración UI.
+
+Contribuir
+Haz un fork de este repositorio.
+
+Crea una rama feat/tu-feature o fix/tu-fix.
+
+Asegúrate de que pre-commit pasa y los tests 🟢.
+
+Abre un Pull Request.
+
+Licencia
+Este proyecto se distribuye bajo MIT License. Consulta el fichero LICENSE para más detalles.
