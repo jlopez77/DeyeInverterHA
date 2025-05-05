@@ -55,13 +55,10 @@ Once installed, the integration can be configured entirely through the Home Assi
 
 You will be asked for:
 
-Host: The IP address of your inverter
-
-Port: Modbus TCP port (default: 8899)
-
-Serial Number: The inverter’s serial number
-
-Installed Power (kW): For production % estimation
+- Host: The IP address of your inverter
+- Port: Modbus TCP port (default: 8899)
+- Serial Number: The inverter’s serial number
+- Installed Power (kW): For production % estimation
 
 ## Entities
 ### Main Sensor
