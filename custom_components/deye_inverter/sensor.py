@@ -20,7 +20,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([DeyeInverterSensor(coordinator)], update_before_add=True)
+    async_add_entities([DeyeInverterSensor(coordinator)], update_before_add=False)
 
 
 class DeyeInverterSensor(CoordinatorEntity, SensorEntity):
