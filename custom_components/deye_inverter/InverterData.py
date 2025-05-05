@@ -55,16 +55,28 @@ class InverterData:
             )
 
         try:
-            regs1 = await loop.run_in_executor(None, read_block, first_addr, first_len)
+            regs1 = await loop.run_in_executor(
+                    None, read_block, first_addr, first_len
+                    )
             regs2 = await loop.run_in_executor(
                 None, read_block, second_addr, second_len
             )
         except Exception as e:
-            _LOGGER.error("Error leyendo registros con PySolarmanV5: %s", e)
+            _LOGGER.error("Error leyendo registros: %s", e)
             raise ModbusException(e)
 
-        _LOGGER.debug("Regs bloque1 (%s, %s): %s", first_addr, first_len, regs1)
-        _LOGGER.debug("Regs bloque2 (%s, %s): %s", second_addr, second_len, regs2)
+        _LOGGER.debug(
+                "Regs bloque1 (%s, %s): %s",
+                first_addr,
+                first_len,
+                regs1
+                )
+        _LOGGER.debug(
+                "Regs bloque2 (%s, %s): %s",
+                second_addr,
+                second_len,
+                regs2
+                )
 
         raw = regs1 + regs2
         _LOGGER.debug("RAW registers (total %d): %s", len(raw), raw)

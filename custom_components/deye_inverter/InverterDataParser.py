@@ -76,7 +76,7 @@ def parse_raw(raw: list[int]) -> dict[int, float]:
                 else:
                     continue
 
-                regs = raw[idx : idx + length]
+                regs = raw[idx: idx + length]
                 raw_int = combine_registers(regs, signed)
 
                 # Ajuste de temperatura
