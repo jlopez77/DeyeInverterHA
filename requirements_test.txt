@@ -6,3 +6,4 @@ flake8
 mypy
 black
 pymodbus>=3.0.0
+pysolarmanv5>=1.0.0
