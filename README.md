@@ -60,13 +60,13 @@ Port: Modbus TCP port (default: 8899)
 Serial Number: The inverter’s serial number
 Installed Power (kW): For production % estimation
 
-## Entities
-# Main Sensor
+# Entities
+## Main Sensor
 sensor.deye_inverter
 Represents total inverter PV production (PV1 + PV2). This sensor includes all inverter metrics as attributes.
 
-## Available Attributes
-# The sensor exposes all of the following as extra_state_attributes:
+# Available Attributes
+## The sensor exposes all of the following as extra_state_attributes:
 
 PV Metrics
 PV1 Voltage
