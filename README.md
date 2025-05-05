@@ -1,139 +1,51 @@
-# Deye Inverter – Integración para Home Assistant
+# Deye Inverter Integration for Home Assistant
 
-📢 **Aviso**: Esta integración aún está en desarrollo y cumple el nivel **Bronze** de la Home Assistant Quality Scale. ¡Tu feedback es bienvenido!
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Quality: Silver](https://img.shields.io/badge/Quality-Silver-silver)
 
-## Descripción
+## Overview
 
-El componente **Deye Inverter** te permite leer en tiempo real los datos de inversores Deye vía Modbus/TCP y exponerlos en Home Assistant como un único sensor de potencia principal (`sensor.deye_inverter_power`) con **todos** los demás valores (voltajes, corrientes, energía, estado, etc.) en sus atributos.
+This custom integration allows Home Assistant to read **real-time data** from **Deye hybrid inverters** over Modbus TCP, using a mapping file based on `DYRealTime.txt` and powered by [`PySolarmanV5`](https://github.com/jlopez77/pysolarmanv5) and `pymodbus`.
 
-- Estado principal: **Total PV Power** (PV1 + PV2).  
-- Atributos: estado de batería, potencia de red, consumos, temperaturas, alarmas…  
-- Compatible con UI config flow: configura host, puerto, número de serie y potencia instalada.  
-- Soporta modos claro/oscuro: `icon.png`/`dark_icon.png` y `logo.png`/`dark_logo.png`.  
+It provides a single sensor entity — **`sensor.deye_inverter`** — with a wide set of inverter metrics exposed via `extra_state_attributes`.
 
 ---
 
-## Características
+## Features
 
-- ✅ Configuración 100 % desde UI (no requiere YAML).  
-- ✅ Sensor principal con icono MDI (`mdi:solar-power`).  
-- ✅ Atributos ricos con todos los registros de DYRealTime.txt.  
-- ✅ Reintento silencioso si pierde conexión (mantiene últimos datos).  
-- ✅ Integración con Energy Dashboard gracias a `device_class` y `state_class`.  
-
----
-
-## Requisitos
-
-- Home Assistant ≥ 2025.2  
-- Sólo dependencias internas. No requiere `configuration.yaml` extra (salvo `logger` si quieres ver debug).  
+- 📡 Real-time data from Deye hybrid inverters
+- 🧠 Based on `PySolarmanV5` and `pymodbus`
+- 🧩 UI-based configuration (no YAML needed)
+- 📊 Exposes 50+ inverter metrics as sensor attributes
+- 💡 Works offline — no cloud dependency
 
 ---
 
-## Instalación
+## Installation
 
-1. Copia la carpeta `custom_components/deye_inverter/` en tu directorio `<config>/custom_components/`.  
-2. Reinicia Home Assistant.  
-3. Ve a **Ajustes → Integraciones → Añadir integración** y busca **Deye Inverter**.  
-4. Introduce:
-   - **Host**: IP o hostname del inversor.  
-   - **Port**: Puerto Modbus/TCP (p.ej. 502).  
-   - **Serial**: Número de serie de 8 hex-dígitos.  
-   - **Installed power**: Potencia instalada (en W).  
+This integration is **not yet in HACS**. You can install it manually for now:
 
----
+### Requirements
 
-## Entidades
+- Home Assistant 2021.12 or newer
+- Network access to your inverter's Modbus TCP interface
 
-| Entity ID                        | Descripción                 | Unidad | Device class | State class           |
-| -------------------------------- | --------------------------- | ------ | ------------ | --------------------- |
-| `sensor.deye_inverter_power`     | **Total PV Power**          | W      | power        | measurement           |
-| *(atributos)*                    | _Todos los demás valores_*  | —      | —            | —                     |
+### Manual Steps
 
-> Todos los demás registros —voltajes, corrientes, energías, estados, temperatura— están en `extra_state_attributes` de `sensor.deye_inverter_power`, accesibles como:
-> ```jinja
-> state_attr('sensor.deye_inverter_power', 'Battery Voltage')
-> state_attr('sensor.deye_inverter_power', 'Grid Voltage L1')
-> state_attr('sensor.deye_inverter_power', 'Daily Energy Bought')
-> # etc.
-> ```
+1. Download or clone this repository:
+   ```bash
+   git clone https://github.com/jlopez77/DeyeInverterHA.git
 
----
+2. Copy the folder:
 
-## Ejemplos de uso
+   ```bash
+   custom_components/deyeinverter
 
-### Dashboard Lovelace
+into your Home Assistant config directory:
 
-type: entities
-title: Deye Inverter Overview
-show_header_toggle: false
-entities:
-  - entity: sensor.deye_inverter_power
-    name: Potencia Solar Total
-  - attribute: “Battery SOC”
-    entity: sensor.deye_inverter_power
-    name: Estado de Carga (%)
-  - attribute: “Grid Status”
-    entity: sensor.deye_inverter_power
-    name: Estado de Red
-  - attribute: “Battery Power”
-    entity: sensor.deye_inverter_power
-    name: Potencia Batería
-  - attribute: “DC Temperature”
-    entity: sensor.deye_inverter_power
-    name: Temp. DC (ºC)
+   ```bash
+   config/custom_components/deyeinverter
 
-Energy Dashboard
-En Ajustes → Panel de Energía, añade:
+3. Restart Home Assistant.
 
-Solar Production: fuente → sensor.deye_inverter_power.
-
-Import: fuente → sensor.deye_inverter_power (Power → energía acumulada).
-
-Export: igual, usando el atributo Daily Energy Sold.
-
-Template Sensor
-Si quieres un template simple, p.ej. cálculo de consumo real:
-
-yaml
-Copiar
-Editar
-template:
-  - sensor:
-      - name: Consumo Real
-        unit_of_measurement: W
-        state: >-
-          {% set prod = state_attr('sensor.deye_inverter_power','Total PV Power')|float(0) %}
-          {% set grid = state_attr('sensor.deye_inverter_power','Total Grid Power')|float(0) %}
-          {{ prod - grid }}
-Desarrollo y calidad (Bronze)
-Pre-commit (Black, isort, Flake8, mypy)
-bash
-Copiar
-Editar
-# Instalar
-pip install pre-commit black isort flake8 mypy
-
-# Inicializar
-pre-commit install
-
-# En cada commit se aplicarán formateo y checks
-Tests
-bash
-Copiar
-Editar
-pip install pytest pytest-homeassistant-custom-component
-pytest --disable-warnings -q
-El test básico (tests/test_config_flow.py) verifica el flujo de configuración UI.
-
-Contribuir
-Haz un fork de este repositorio.
-
-Crea una rama feat/tu-feature o fix/tu-fix.
-
-Asegúrate de que pre-commit pasa y los tests 🟢.
-
-Abre un Pull Request.
-
-Licencia
-Este proyecto se distribuye bajo MIT License. Consulta el fichero LICENSE para más detalles.
+In the UI, go to Settings > Devices & Services > Add Integration, search for Deye Inverter, and follow the setup steps.
