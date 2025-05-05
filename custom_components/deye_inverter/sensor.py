@@ -78,4 +78,3 @@ class DeyeInverterSensor(CoordinatorEntity, SensorEntity):
             "model": "Inverter",
             "sw_version": "1.0.0",
         }
-
