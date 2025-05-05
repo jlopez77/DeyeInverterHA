@@ -1,0 +1,8 @@
+pytest
+pytest-asyncio
+pytest-cov
+pytest-homeassistant-custom-component
+flake8
+mypy
+black
+
