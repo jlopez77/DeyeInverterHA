@@ -37,11 +37,6 @@ class InverterData:
         )
 
     async def fetch_data(self) -> dict[int, float]:
-        """
-        Lee dos bloques de registros y devuelve el dict parseado:
-        - Bloque1: 0x003B–0x0070
-        - Bloque2: 0x0096–0x00C3
-        """
         loop = asyncio.get_running_loop()
         first_addr = 0x003B
         first_len = 0x0070 - first_addr + 1
@@ -56,6 +51,7 @@ class InverterData:
 
         try:
             regs1 = await loop.run_in_executor(None, read_block, first_addr, first_len)
+            await asyncio.sleep(0.1)
             regs2 = await loop.run_in_executor(
                 None, read_block, second_addr, second_len
             )
