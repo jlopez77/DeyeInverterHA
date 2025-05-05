@@ -68,10 +68,10 @@ class DeyeInverterSensor(CoordinatorEntity, SensorEntity):
         """Return device information for this inverter."""
         return {
             "identifiers": {
-                (DOMAIN, self.coordinator.serial)
-            },  # type: ignore[attr-defined]
+                (DOMAIN, self.coordinator.serial)  # type: ignore[attr-defined]
+            },  
             "name": "Deye Inverter",
             "manufacturer": "Deye",
             "model": "Inverter",
             "sw_version": "1.0.0",
-        }
+        } 
