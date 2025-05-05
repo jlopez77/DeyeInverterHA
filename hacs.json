@@ -1,0 +1,9 @@
+{
+  "name": "Deye Inverter",
+  "domain": "deye_inverter",
+  "documentation": "https://github.com/jlopez77/DeyeInverterHA",
+  "issue_tracker": "https://github.com/jlopez77/DeyeInverterHA/issues",
+  "codeowners": ["@jlopez77"],
+  "requirements": [],
+  "version": "1.0.0"
+}

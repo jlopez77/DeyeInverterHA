@@ -47,3 +47,13 @@ def test_extra_state_attributes(mock_coordinator):
     assert "Battery Power" in attrs
     assert attrs["Battery Power"] == 100
 
+def test_device_info(mock_coordinator):
+    """Test that device_info is returned correctly."""
+    sensor = DeyeInverterSensor(mock_coordinator)
+    info = sensor.device_info
+
+    assert isinstance(info, dict)
+    assert info["identifiers"] == {("deye_inverter", "ABC123")}
+    assert info["manufacturer"] == "Deye"
+    assert info["name"] == "Deye Inverter"
+    assert info["model"] == "Inverter"

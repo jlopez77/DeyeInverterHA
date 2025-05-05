@@ -20,8 +20,8 @@ async def async_setup_entry(
 ):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
-            [DeyeInverterSensor(coordinator)],
-            update_before_add=True
+        [DeyeInverterSensor(coordinator)],
+        update_before_add=True
     )
 
 
@@ -52,7 +52,7 @@ class DeyeInverterSensor(CoordinatorEntity, SensorEntity):
             _DEFINITIONS.values() if isinstance(
                 _DEFINITIONS,
                 dict
-                ) else _DEFINITIONS
+            ) else _DEFINITIONS
         )
         for section in sections:
             for item in section.get("items", []):
@@ -67,3 +67,15 @@ class DeyeInverterSensor(CoordinatorEntity, SensorEntity):
                         continue
                     attrs[title] = raw_val
         return attrs
+
+    @property
+    def device_info(self) -> dict:
+        """Return device information for this inverter."""
+        return {
+            "identifiers": {(DOMAIN, self.coordinator.serial)},
+            "name": "Deye Inverter",
+            "manufacturer": "Deye",
+            "model": "Inverter",
+            "sw_version": "1.0.0",
+        }
+
