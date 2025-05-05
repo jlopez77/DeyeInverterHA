@@ -1,59 +1,47 @@
-"""DataUpdateCoordinator para Deye Inverter."""
-
 import logging
 from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DEFAULT_SCAN_INTERVAL
+from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
 from .InverterData import InverterData
 
 _LOGGER = logging.getLogger(__name__)
 
-
-class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
-    """Coordinador que consulta periódicamente el inversor."""
-
+class DeyeDataUpdateCoordinator(DataUpdateCoordinator[dict[int, float]]):
+    """
+    Coordinator asíncrono para datos del inversor.
+    Ahora utiliza InverterData que requiere host, port y serial.
+    """
     def __init__(
         self,
         hass: HomeAssistant,
         host: str,
         port: int,
         serial: str,
-        installed_power: int,
-    ):
-        """Inicializa el coordinador y guarda los parámetros."""
-        # Guarda el serial para usarlo luego en las entidades
-        self.serial = serial
-        # (Opcional) también puedes guardar host/port si los necesitas:
-        self.host = host
-        self.port = port
-        self.installed_power = installed_power
+        installed_power: float,
+    ) -> None:
+        # Inicializamos el cliente con host, puerto y serial
+        self.inverter = InverterData(host, port, serial)
 
-        # Inicializa el cliente Modbus
-        self.client = InverterData(host, port, serial, installed_power)
+        # Exponemos estos atributos para que los sensores puedan usarlos
+        self.serial = serial
+        self.installed_power = installed_power
 
         super().__init__(
             hass,
             _LOGGER,
-            name=f"DeyeInverter-{serial}",
+            name=DOMAIN,
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
 
-    async def _async_update_data(self):
+    async def _async_update_data(self) -> dict[int, float]:
         """
-        Llamada periódica para obtener datos del inversor.
-
-        - En un fallo de lectura, si ya teníamos datos previos (self.data es dict),
-          los devolvemos para evitar que las entidades desaparezcan.
-        - Si es el primer fetch y falla, devolvemos {} para que self.data sea un dict vacío.
+        Llamada periódica: obtiene los datos y maneja errores.
         """
         try:
-            new_data = await self.hass.async_add_executor_job(
-                self.client.read_real_time
-            )
-            return new_data or {}
+            return await self.inverter.fetch_data()
         except Exception as err:
-            _LOGGER.error("Error al leer inversor, manteniendo últimos datos: %s", err)
-            return self.data if isinstance(self.data, dict) else {}
+            _LOGGER.error("Error actualizando datos del inversor: %s", err)
+            raise UpdateFailed(err)

@@ -3,7 +3,9 @@
   "name": "Deye Inverter",
   "version": "1.0.0",
   "documentation": "https://github.com/jlopez77/DeyeInverter",
-  "requirements": [],
+  "requirements": [
+    "pysolarmanv5>=0.1.4"
+  ],
   "dependencies": [],
   "config_flow": true,
   "single_config_entry": true,
