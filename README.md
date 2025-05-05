@@ -71,61 +71,61 @@ Represents total inverter PV production (PV1 + PV2). This sensor includes all in
 ## Available Attributes
 ### The sensor exposes all of the following as extra_state_attributes:
 
-PV Metrics
-PV1 Voltage
-PV1 Current
-PV1 Power
-PV2 Voltage
-PV2 Current
-PV2 Power
-Battery
-Battery Voltage
-Battery Current
-Battery Power
-Battery SOC
-Battery Temperature
-Battery Status
-Grid
-Grid Voltage L1
-Grid Voltage L2
-Grid-connected Status
-Total Grid Power
-Total Grid Production
-Total Energy Bought
-Total Energy Sold
-Daily Energy Bought
-Daily Energy Sold
-Load
-Load L1 Power
-Load L2 Power
-Load Voltage
-Total Load Power
-Total Load Consumption
-Daily Load Consumption
-Temperature
-AC Temperature
-DC Temperature
-Other Metrics
-Total Production
-Daily Production
-Total Power
-Time of use
-SmartLoad Enable Status
-Gen-connected Status
-Gen Power
-Running Status
-Alert
-Work Mode
-Inverter ID
-Inverter L1 Power
-Inverter L2 Power
-Communication Board Version No.
-Control Board Version No.
-Micro-inverter Power
-External CT L1 Power
-External CT L2 Power
-Internal CT L1 Power
-Internal CT L2 Power
+- PV Metrics
+   - PV1 Voltage
+   - PV1 Current
+   - PV1 Power
+   - PV2 Voltage
+   - PV2 Current
+   - PV2 Power
+- Battery
+   - Battery Voltage
+   - Battery Current
+   - Battery Power
+   - Battery SOC
+   - Battery Temperature
+   - Battery Status
+- Grid
+   - Grid Voltage L1
+   - Grid Voltage L2
+   - Grid-connected Status
+   - Total Grid Power
+   - Total Grid Production
+   - Total Energy Bought
+   - Total Energy Sold
+   - Daily Energy Bought
+   - Daily Energy Sold
+- Load
+   - Load L1 Power
+   - Load L2 Power
+   - Load Voltage
+   - Total Load Power
+   - Total Load Consumption
+   - Daily Load Consumption
+- Temperature
+   - AC Temperature
+   - DC Temperature
+- Other Metrics
+   - Total Production
+   - Daily Production
+   - Total Power
+   - Time of use
+   - SmartLoad Enable Status
+   - Gen-connected Status
+   - Gen Power
+   - Running Status
+   - Alert
+   - Work Mode
+   - Inverter ID
+   - Inverter L1 Power
+   - Inverter L2 Power
+   - Communication Board Version No.
+   - Control Board Version No.
+   - Micro-inverter Power
+   - External CT L1 Power
+   - External CT L2 Power
+   - Internal CT L1 Power
+   - Internal CT L2 Power
 
 ## Troubleshooting
 
