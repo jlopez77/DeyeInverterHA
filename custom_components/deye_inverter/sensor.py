@@ -8,6 +8,7 @@ from homeassistant.const import UnitOfPower
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN
 from .InverterDataParser import _DEFINITIONS
@@ -19,10 +20,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        [DeyeInverterSensor(coordinator)],
-        update_before_add=True
-    )
+    async_add_entities([DeyeInverterSensor(coordinator)], update_before_add=True)
 
 
 class DeyeInverterSensor(CoordinatorEntity, SensorEntity):
@@ -49,10 +47,7 @@ class DeyeInverterSensor(CoordinatorEntity, SensorEntity):
         data = self.coordinator.data or {}
         attrs = {}
         sections = (
-            _DEFINITIONS.values() if isinstance(
-                _DEFINITIONS,
-                dict
-            ) else _DEFINITIONS
+            _DEFINITIONS.values() if isinstance(_DEFINITIONS, dict) else _DEFINITIONS
         )
         for section in sections:
             for item in section.get("items", []):
@@ -69,10 +64,10 @@ class DeyeInverterSensor(CoordinatorEntity, SensorEntity):
         return attrs
 
     @property
-    def device_info(self) -> dict:
+    def device_info(self) -> DeviceInfo:
         """Return device information for this inverter."""
         return {
-            "identifiers": {(DOMAIN, self.coordinator.serial)},
+                "identifiers": {(DOMAIN, self.coordinator.serial)}, #type: ignore[attr-defined]
             "name": "Deye Inverter",
             "manufacturer": "Deye",
             "model": "Inverter",
