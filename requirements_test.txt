@@ -5,4 +5,4 @@ pytest-homeassistant-custom-component
 flake8
 mypy
 black
-
+pymodbus>=3.0.0
