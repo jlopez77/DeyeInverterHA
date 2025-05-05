@@ -41,11 +41,11 @@ This integration is **not yet in HACS**. You can install it manually for now:
    ```bash
    custom_components/deyeinverter
 
-into your Home Assistant config directory:
+  into your Home Assistant config directory:
 
    ```bash
    config/custom_components/deyeinverter
-
+```
 3. Restart Home Assistant.
 
 In the UI, go to Settings > Devices & Services > Add Integration, search for Deye Inverter, and follow the setup steps.
