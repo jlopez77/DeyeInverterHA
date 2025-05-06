@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Union
 
-from homeassistant.const import UnitOfPower
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.const import UnitOfPower
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass, entry, async_add_entities: AddEntitiesCallback
+    hass: Any, entry: Any, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the sensor platform."""
     coordinator: DeyeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
@@ -36,7 +36,7 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
     def __init__(self, coordinator: DeyeDataUpdateCoordinator) -> None:
         """Initialize the sensor with coordinator and set metadata."""
         super().__init__(coordinator)
-        serial = coordinator.serial
+        serial = getattr(coordinator, "serial", "unknown")
         self._attr_name = f"Deye Inverter {serial}"
         self._attr_unique_id = f"deye_inverter_{serial}"
         self._attr_native_unit_of_measurement = UnitOfPower.WATT
@@ -46,7 +46,7 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
     @property
     def device_info(self) -> DeviceInfo:
         """Return device info for the Deye inverter."""
-        serial = self.coordinator.serial
+        serial = getattr(self.coordinator, "serial", "unknown")
         return DeviceInfo(
             identifiers={(DOMAIN, serial)},
             name=f"Deye Inverter {serial}",
@@ -62,12 +62,13 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
         return float(data.get(0x00BA, 0.0) + data.get(0x00BB, 0.0))
 
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return all other inverter parameters as state attributes."""
-        attrs: Dict[str, Any] = {}
+        attrs: dict[str, Any] = {}
         sections: Union[List[Any], Any] = (
             _DEFINITIONS.values() if isinstance(_DEFINITIONS, dict) else _DEFINITIONS
         )
+
         for section in sections:
             for item in section.get("items", []):
                 title = item.get("titleEN") or item.get("titleZH") or "Unknown"
@@ -77,4 +78,6 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
                     except (ValueError, TypeError):
                         continue
                     attrs[title] = self.coordinator.data.get(reg)
+
+        attrs["attribution"] = "Data provided by Deye inverter via Modbus TCP"
         return attrs
