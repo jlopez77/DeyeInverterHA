@@ -1,0 +1,8 @@
+{
+  "name": "Deye Inverter",
+  "content_in_root": false,
+  "domain": "deye_inverter",
+  "zip_release": false,
+  "country": "global",
+  "homeassistant": "2021.12.0"
+}
