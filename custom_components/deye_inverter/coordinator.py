@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from typing import Any, Dict
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -10,7 +11,7 @@ from .InverterData import InverterData
 _LOGGER = logging.getLogger(__name__)
 
 
-class DeyeDataUpdateCoordinator(DataUpdateCoordinator[dict[int, float]]):
+class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[int, Any]]):
     """
     Coordinator asíncrono para datos del inversor.
     Ahora utiliza InverterData que requiere host, port y serial.
@@ -38,7 +39,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[dict[int, float]]):
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
 
-    async def _async_update_data(self) -> dict[int, float]:
+    async def _async_update_data(self) -> Dict[int, Any]:
         """
         Llamada periódica: obtiene los datos y maneja errores.
         """
