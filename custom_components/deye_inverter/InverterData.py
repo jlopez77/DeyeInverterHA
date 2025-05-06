@@ -1,5 +1,7 @@
-import logging
 import asyncio
+import logging
+from typing import Any, Dict
+
 from pymodbus.exceptions import ModbusException
 from pysolarmanv5.pysolarmanv5 import PySolarmanV5
 
@@ -24,7 +26,6 @@ class InverterData:
         self._host = host
         self._port = port
         self._serial = int(serial)
-        # Instanciamos PySolarmanV5 con address, serial, slave-id y timeout
         self._modbus = PySolarmanV5(
             self._host,
             self._serial,
@@ -36,21 +37,24 @@ class InverterData:
             logger=_LOGGER,
         )
 
-    async def fetch_data(self) -> dict[int, float]:
+    async def fetch_data(self) -> Dict[int, Any]:
+        """Lee dos bloques de registros y retorna el dict parseado."""
         loop = asyncio.get_running_loop()
         first_addr = 0x003B
         first_len = 0x0070 - first_addr + 1
         second_addr = 0x0096
         second_len = 0x00C3 - second_addr + 1
 
-        # Llamada usando named args para register_addr y quantity
-        def read_block(addr, length):
+        def read_block(addr: int, length: int) -> list[int]:
             return self._modbus.read_holding_registers(
                 register_addr=addr, quantity=length
             )
 
         try:
-            regs1 = await loop.run_in_executor(None, read_block, first_addr, first_len)
+            regs1 = await loop.run_in_executor(
+                None, read_block, first_addr, first_len
+            )
+            # Pausa para evitar desajuste de secuencia interno
             await asyncio.sleep(0.1)
             regs2 = await loop.run_in_executor(
                 None, read_block, second_addr, second_len
@@ -64,4 +68,5 @@ class InverterData:
 
         raw = regs1 + regs2
         _LOGGER.debug("RAW registers (total %d): %s", len(raw), raw)
+
         return parse_raw(raw)
