@@ -57,7 +57,7 @@ You will be asked for:
 
 - Host: The IP address of your inverter
 - Port: Modbus TCP port (default: 8899)
-- Serial Number: The inverter’s serial number
+- Serial Number: The datalogger’s serial number (something like 17XXXXXX)
 - Installed Power (kW): For production % estimation
 
 ## Entities
