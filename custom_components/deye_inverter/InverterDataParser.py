@@ -118,4 +118,3 @@ def parse_raw(raw: List[int]) -> Dict[int, Any]:
                 result[reg] = round(val, 2)
 
     return result
-

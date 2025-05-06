@@ -46,9 +46,7 @@ class InverterData:
             )
 
         try:
-            regs1 = await loop.run_in_executor(
-                None, read_block, first_addr, first_len
-            )
+            regs1 = await loop.run_in_executor(None, read_block, first_addr, first_len)
             await asyncio.sleep(0.1)
             regs2 = await loop.run_in_executor(
                 None, read_block, second_addr, second_len
@@ -64,4 +62,3 @@ class InverterData:
         _LOGGER.debug("RAW registers (total %d): %s", len(raw), raw)
 
         return parse_raw(raw)
-
