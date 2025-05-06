@@ -52,6 +52,7 @@ def test_device_info(mock_coordinator):
     sensor = DeyeInverterSensor(mock_coordinator)
     info = sensor.device_info
 
+    assert info is not None, "device_info is None — ensure the sensor defines the property"
     assert isinstance(info, dict)
     assert info["identifiers"] == {("deye_inverter", "ABC123")}
     assert info["manufacturer"] == "Deye"
