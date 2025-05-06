@@ -100,7 +100,7 @@
       {
         "titleZH": "电池状态",
         "titleEN": "Battery Status",
-        "registers": ["0x00BE"],
+        "registers": ["0x00B9"],
         "interactionType": 2,
         "parserRule": 2,
         "optionRanges": [
