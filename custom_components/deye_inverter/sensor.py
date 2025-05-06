@@ -28,7 +28,7 @@ async def async_setup_entry(
 
 
 class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEntity):
-    """total inverter power and all other values as attributes."""
+    """inverter power and all other values as attributes."""
 
     _attr_has_entity_name = True
 
@@ -54,9 +54,7 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
         attrs: Dict[str, Any] = {}
         # Normalize sections: dict.values() or list
         sections: Union[List[Any], Any] = (
-            _DEFINITIONS.values()
-            if isinstance(_DEFINITIONS, dict)
-            else _DEFINITIONS
+            _DEFINITIONS.values() if isinstance(_DEFINITIONS, dict) else _DEFINITIONS
         )
 
         for section in sections:

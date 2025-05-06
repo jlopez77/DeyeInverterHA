@@ -51,9 +51,7 @@ class InverterData:
             )
 
         try:
-            regs1 = await loop.run_in_executor(
-                None, read_block, first_addr, first_len
-            )
+            regs1 = await loop.run_in_executor(None, read_block, first_addr, first_len)
             # Pausa para evitar desajuste de secuencia interno
             await asyncio.sleep(0.1)
             regs2 = await loop.run_in_executor(
