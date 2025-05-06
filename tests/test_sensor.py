@@ -11,7 +11,7 @@ def mock_coordinator():
     coordinator.data = {
         0x00BA: 500,   # PV1 power
         0x00BB: 300,   # PV2 power
-        0x00BC: 100,   # Extra
+        0x00BC: 100,   # Battery power
     }
     coordinator.serial = "ABC123"
     coordinator.last_update_success = True
