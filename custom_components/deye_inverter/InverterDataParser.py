@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 import importlib.resources as pkg_resources
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Sequence, Union
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,6 +26,34 @@ def _load_definitions() -> Union[Dict[str, Any], List[Any]]:
 
 _DEFINITIONS = _load_definitions()
 
+# Construimos mapeos de enums para items con optionRanges
+_ENUM_MAPPINGS: Dict[int, Dict[int, str]] = {}
+
+# Normalizamos siempre a lista de secciones
+sections_for_mapping: Sequence[Dict[str, Any]] = (
+    list(_DEFINITIONS.values())
+    if isinstance(_DEFINITIONS, dict)
+    else _DEFINITIONS  # type: ignore[assignment]
+)
+
+for section in sections_for_mapping:
+    for item in section.get("items", []):
+        option_ranges = item.get("optionRanges")
+        if not isinstance(option_ranges, list):
+            continue
+        mapping: Dict[int, str] = {}
+        for opt in option_ranges:
+            key = opt.get("key")
+            val = opt.get("valueEN")
+            if isinstance(key, int) and isinstance(val, str):
+                mapping[key] = val
+        for reg_hex in item.get("registers", []):
+            try:
+                reg = int(reg_hex, 16)
+            except (ValueError, TypeError):
+                continue
+            _ENUM_MAPPINGS[reg] = mapping
+
 
 def combine_registers(registers: List[int], signed: bool = True) -> int:
     value = 0
@@ -43,10 +71,11 @@ def parse_raw(raw: List[int]) -> Dict[int, Any]:
     first_block_len = 0x0070 - 0x003B + 1
 
     # Iterar secciones
+    sections: Sequence[Dict[str, Any]]
     if isinstance(_DEFINITIONS, dict):
-        sections = _DEFINITIONS.values()
+        sections = list(_DEFINITIONS.values())
     elif isinstance(_DEFINITIONS, list):
-        sections = _DEFINITIONS
+        sections = _DEFINITIONS  # type: ignore[assignment]
     else:
         _LOGGER.error("Definiciones inválidas: %s", type(_DEFINITIONS))
         return result
@@ -56,27 +85,15 @@ def parse_raw(raw: List[int]) -> Dict[int, Any]:
             title = item.get("titleEN") or item.get("titleZH") or ""
             ratio = float(item.get("ratio", 1))
             offset = float(item.get("offset", 0))
-            signed = item.get("signed", True)
+            signed = bool(item.get("signed", True))
             length = int(item.get("length", 1))
 
-            # Si este item es un enum, construimos el mapeo local
-            option_ranges = item.get("optionRanges")
-            mapping: Dict[int, str] = {}
-            if isinstance(option_ranges, list):
-                for opt in option_ranges:
-                    key = opt.get("key")
-                    val = opt.get("valueEN")
-                    if isinstance(key, int) and isinstance(val, str):
-                        mapping[key] = val
-
-            # Procesar cada registro de este item
             for reg_hex in item.get("registers", []):
                 try:
                     reg = int(reg_hex, 16)
                 except (ValueError, TypeError):
                     continue
 
-                # Índice en raw
                 if 0x003B <= reg <= 0x0070:
                     idx = reg - 0x003B
                 elif 0x0096 <= reg <= 0x00C3:
@@ -87,7 +104,8 @@ def parse_raw(raw: List[int]) -> Dict[int, Any]:
                 regs = raw[idx : idx + length]
                 raw_int = combine_registers(regs, signed)
 
-                # Si es un enum y existe el valor, lo devolvemos como texto
+                # Enum mapping si aplica
+                mapping = _ENUM_MAPPINGS.get(reg)
                 if mapping and raw_int in mapping:
                     result[reg] = mapping[raw_int]
                     continue

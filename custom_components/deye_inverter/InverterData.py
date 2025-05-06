@@ -18,11 +18,6 @@ class InverterData:
     """
 
     def __init__(self, host: str, port: int = 8899, serial: str = "1"):
-        """
-        host: dirección IP del inversor
-        port: puerto Modbus/TCP
-        serial: número de serie del inversor
-        """
         self._host = host
         self._port = port
         self._serial = int(serial)
@@ -52,7 +47,6 @@ class InverterData:
 
         try:
             regs1 = await loop.run_in_executor(None, read_block, first_addr, first_len)
-            # Pausa para evitar desajuste de secuencia interno
             await asyncio.sleep(0.1)
             regs2 = await loop.run_in_executor(
                 None, read_block, second_addr, second_len
