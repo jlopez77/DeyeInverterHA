@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Union
+from typing import Any, List, Union
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
