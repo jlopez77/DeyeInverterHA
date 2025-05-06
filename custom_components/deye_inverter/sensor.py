@@ -28,7 +28,7 @@ async def async_setup_entry(
 
 
 class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEntity):
-    """Sensor that represents the total inverter power and all other values as attributes."""
+    """total inverter power and all other values as attributes."""
 
     _attr_has_entity_name = True
 
