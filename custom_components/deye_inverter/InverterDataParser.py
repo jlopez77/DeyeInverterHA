@@ -3,8 +3,6 @@ import logging
 from pathlib import Path
 import importlib.resources as pkg_resources
 
-# from .const import DOMAIN
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -27,6 +25,24 @@ def _load_definitions() -> dict | list:
 
 _DEFINITIONS = _load_definitions()
 
+# Construimos mapeos de enums para items con optionRanges
+_ENUM_MAPPINGS: dict[int, dict[int, str]] = {}
+sections_for_mapping = (
+    _DEFINITIONS.values() if isinstance(_DEFINITIONS, dict) else _DEFINITIONS
+)
+for section in sections_for_mapping:
+    for item in section.get("items", []):
+        option_ranges = item.get("optionRanges")
+        if not option_ranges:
+            continue
+        mapping = {opt.get("key"): opt.get("valueEN") for opt in option_ranges}
+        for reg_hex in item.get("registers", []):
+            try:
+                reg = int(reg_hex, 16)
+            except Exception:
+                continue
+            _ENUM_MAPPINGS[reg] = mapping
+
 
 def combine_registers(registers: list[int], signed: bool = True) -> int:
     value = 0
@@ -39,13 +55,13 @@ def combine_registers(registers: list[int], signed: bool = True) -> int:
     return value
 
 
-def parse_raw(raw: list[int]) -> dict[int, float]:
-    result: dict[int, float] = {}
+def parse_raw(raw: list[int]) -> dict[int, float | str]:
+    result: dict[int, float | str] = {}
     first_block_len = 0x0070 - 0x003B + 1
 
-    # Determinar cómo iterar secciones
+    # Iterar secciones
     if isinstance(_DEFINITIONS, dict):
-        sections = list(_DEFINITIONS.values())
+        sections = _DEFINITIONS.values()
     elif isinstance(_DEFINITIONS, list):
         sections = _DEFINITIONS
     else:
@@ -53,22 +69,20 @@ def parse_raw(raw: list[int]) -> dict[int, float]:
         return result
 
     for section in sections:
-        items = section.get("items", [])
-        for item in items:
-            title = item.get("titleEN", "")
+        for item in section.get("items", []):
+            title = item.get("titleEN", "") or item.get("titleZH", "")
             ratio = float(item.get("ratio", 1))
             offset = float(item.get("offset", 0))
             signed = item.get("signed", True)
             length = item.get("length", 1)
 
-            # Iterar cada registro declarado
             for reg_hex in item.get("registers", []):
                 try:
                     reg = int(reg_hex, 16)
                 except ValueError:
                     continue
 
-                # Calcular índice en raw
+                # Índice en raw
                 if 0x003B <= reg <= 0x0070:
                     idx = reg - 0x003B
                 elif 0x0096 <= reg <= 0x00C3:
@@ -79,7 +93,13 @@ def parse_raw(raw: list[int]) -> dict[int, float]:
                 regs = raw[idx : idx + length]
                 raw_int = combine_registers(regs, signed)
 
-                # Ajuste de temperatura
+                # Solo aplicamos mapping si el raw_int está en el dict
+                mapping = _ENUM_MAPPINGS.get(reg)
+                if mapping and raw_int in mapping:
+                    result[reg] = mapping[raw_int]
+                    continue
+
+                # Tratamiento numérico
                 if "Temperature" in title:
                     val = raw_int * ratio - 100 + offset
                 else:
