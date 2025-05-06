@@ -1,8 +1,9 @@
 import json
 import logging
 from pathlib import Path
-import importlib.resources as pkg_resources
 from typing import Any, Dict, List, Sequence, Union
+
+import importlib.resources as pkg_resources
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,23 +27,23 @@ def _load_definitions() -> Union[Dict[str, Any], List[Any]]:
 
 _DEFINITIONS = _load_definitions()
 
-# Construimos mapeos de enums para items con optionRanges
+# Construir mapeos de enums solo para parserRule == 2
 _ENUM_MAPPINGS: Dict[int, Dict[int, str]] = {}
-
-# Normalizamos siempre a lista de secciones
-sections_for_mapping: Sequence[Dict[str, Any]] = (
+_sections: Sequence[Dict[str, Any]] = (
     list(_DEFINITIONS.values())
     if isinstance(_DEFINITIONS, dict)
     else _DEFINITIONS  # type: ignore[assignment]
 )
 
-for section in sections_for_mapping:
+for section in _sections:
     for item in section.get("items", []):
-        option_ranges = item.get("optionRanges")
-        if not isinstance(option_ranges, list):
+        if item.get("parserRule") != 2:
+            continue
+        opt_ranges = item.get("optionRanges")
+        if not isinstance(opt_ranges, list):
             continue
         mapping: Dict[int, str] = {}
-        for opt in option_ranges:
+        for opt in opt_ranges:
             key = opt.get("key")
             val = opt.get("valueEN")
             if isinstance(key, int) and isinstance(val, str):
@@ -68,12 +69,10 @@ def combine_registers(registers: List[int], signed: bool = True) -> int:
 
 def parse_raw(raw: List[int]) -> Dict[int, Any]:
     result: Dict[int, Any] = {}
-    first_block_len = 0x0070 - 0x003B + 1
+    first_len = 0x0070 - 0x003B + 1
 
-    # Iterar secciones
-    sections: Sequence[Dict[str, Any]]
     if isinstance(_DEFINITIONS, dict):
-        sections = list(_DEFINITIONS.values())
+        sections: Sequence[Dict[str, Any]] = list(_DEFINITIONS.values())
     elif isinstance(_DEFINITIONS, list):
         sections = _DEFINITIONS  # type: ignore[assignment]
     else:
@@ -97,20 +96,20 @@ def parse_raw(raw: List[int]) -> Dict[int, Any]:
                 if 0x003B <= reg <= 0x0070:
                     idx = reg - 0x003B
                 elif 0x0096 <= reg <= 0x00C3:
-                    idx = first_block_len + (reg - 0x0096)
+                    idx = first_len + (reg - 0x0096)
                 else:
                     continue
 
-                regs = raw[idx : idx + length]
-                raw_int = combine_registers(regs, signed)
+                block = raw[idx : idx + length]
+                raw_int = combine_registers(block, signed)
 
-                # Enum mapping si aplica
+                # Aplicar enum mapping si corresponde
                 mapping = _ENUM_MAPPINGS.get(reg)
                 if mapping and raw_int in mapping:
                     result[reg] = mapping[raw_int]
                     continue
 
-                # Tratamiento numérico
+                # Cálculo numérico
                 if "Temperature" in title:
                     val = raw_int * ratio - 100 + offset
                 else:
@@ -119,3 +118,4 @@ def parse_raw(raw: List[int]) -> Dict[int, Any]:
                 result[reg] = round(val, 2)
 
     return result
+
