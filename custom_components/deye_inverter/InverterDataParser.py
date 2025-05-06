@@ -2,11 +2,12 @@ import json
 import logging
 from pathlib import Path
 import importlib.resources as pkg_resources
+from typing import Any, Dict, List, Union
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def _load_definitions() -> dict | list:
+def _load_definitions() -> Union[Dict[str, Any], List[Any]]:
     try:
         data = pkg_resources.read_text(__package__, "DYRealTime.txt")
     except Exception:
@@ -25,26 +26,8 @@ def _load_definitions() -> dict | list:
 
 _DEFINITIONS = _load_definitions()
 
-# Construimos mapeos de enums para items con optionRanges
-_ENUM_MAPPINGS: dict[int, dict[int, str]] = {}
-sections_for_mapping = (
-    _DEFINITIONS.values() if isinstance(_DEFINITIONS, dict) else _DEFINITIONS
-)
-for section in sections_for_mapping:
-    for item in section.get("items", []):
-        option_ranges = item.get("optionRanges")
-        if not option_ranges:
-            continue
-        mapping = {opt.get("key"): opt.get("valueEN") for opt in option_ranges}
-        for reg_hex in item.get("registers", []):
-            try:
-                reg = int(reg_hex, 16)
-            except Exception:
-                continue
-            _ENUM_MAPPINGS[reg] = mapping
 
-
-def combine_registers(registers: list[int], signed: bool = True) -> int:
+def combine_registers(registers: List[int], signed: bool = True) -> int:
     value = 0
     for reg in registers:
         value = (value << 16) | (reg & 0xFFFF)
@@ -55,8 +38,8 @@ def combine_registers(registers: list[int], signed: bool = True) -> int:
     return value
 
 
-def parse_raw(raw: list[int]) -> dict[int, float | str]:
-    result: dict[int, float | str] = {}
+def parse_raw(raw: List[int]) -> Dict[int, Any]:
+    result: Dict[int, Any] = {}
     first_block_len = 0x0070 - 0x003B + 1
 
     # Iterar secciones
@@ -70,16 +53,27 @@ def parse_raw(raw: list[int]) -> dict[int, float | str]:
 
     for section in sections:
         for item in section.get("items", []):
-            title = item.get("titleEN", "") or item.get("titleZH", "")
+            title = item.get("titleEN") or item.get("titleZH") or ""
             ratio = float(item.get("ratio", 1))
             offset = float(item.get("offset", 0))
             signed = item.get("signed", True)
-            length = item.get("length", 1)
+            length = int(item.get("length", 1))
 
+            # Si este item es un enum, construimos el mapeo local
+            option_ranges = item.get("optionRanges")
+            mapping: Dict[int, str] = {}
+            if isinstance(option_ranges, list):
+                for opt in option_ranges:
+                    key = opt.get("key")
+                    val = opt.get("valueEN")
+                    if isinstance(key, int) and isinstance(val, str):
+                        mapping[key] = val
+
+            # Procesar cada registro de este item
             for reg_hex in item.get("registers", []):
                 try:
                     reg = int(reg_hex, 16)
-                except ValueError:
+                except (ValueError, TypeError):
                     continue
 
                 # Índice en raw
@@ -93,8 +87,7 @@ def parse_raw(raw: list[int]) -> dict[int, float | str]:
                 regs = raw[idx : idx + length]
                 raw_int = combine_registers(regs, signed)
 
-                # Solo aplicamos mapping si el raw_int está en el dict
-                mapping = _ENUM_MAPPINGS.get(reg)
+                # Si es un enum y existe el valor, lo devolvemos como texto
                 if mapping and raw_int in mapping:
                     result[reg] = mapping[raw_int]
                     continue
