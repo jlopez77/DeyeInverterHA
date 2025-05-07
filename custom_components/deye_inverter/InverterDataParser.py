@@ -62,7 +62,9 @@ for section in _sections:
                     continue
 
 
-def combine_registers(registers: List[int], signed: bool = True) -> int:
+def combine_registers(registers: List[int], signed: bool = True, reverse: bool = False) -> int:
+    if reverse and len(registers) == 2:
+        registers = list(reversed(registers))
     value = 0
     for reg in registers:
         value = (value << 16) | (reg & 0xFFFF)
@@ -111,6 +113,14 @@ def parse_gen_connected_status(value: int) -> str:
 def parse_raw(raw: List[int]) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
     first_len = 0x0070 - 0x003B + 1
+
+    REVERSED_FIELDS = {
+        "Total Production",
+        "Total Load Consumption",
+        "Total Energy Sold",
+        "Total Energy Bought",
+        "Total Grid Production"
+    }
 
     if isinstance(_DEFINITIONS, dict):
         sections: Sequence[Dict[str, Any]] = list(_DEFINITIONS.values())
@@ -172,7 +182,8 @@ def parse_raw(raw: List[int]) -> Dict[str, Any]:
                     result[title] = value or None
                     continue
 
-                raw_int = combine_registers(block, signed=signed)
+                reverse = title in REVERSED_FIELDS
+                raw_int = combine_registers(block, signed=signed, reverse=reverse)
 
                 # Custom logic overrides
                 reg_key = int(registers[0], 16)
@@ -206,12 +217,18 @@ def parse_raw(raw: List[int]) -> Dict[str, Any]:
                     result[title] = raw_int
                     continue
 
-                # Default: numeric
-                if "Temperature" in title:
-                    val = raw_int * ratio - 100 + offset
-                else:
+                if title in [
+                    "Total Grid Production"
+                ]:
                     val = raw_int * ratio + offset
-                result[title] = float(round(val, 2))
+                    result[title] = f"{round(val, 2)} (raw: {raw_int})"
+                else:
+                    # Default: numeric
+                    if "Temperature" in title:
+                        val = raw_int * ratio - 100 + offset
+                    else:
+                        val = raw_int * ratio + offset
+                    result[title] = float(round(val, 2))
 
             except Exception as e:
                 _LOGGER.debug("Error parsing %s: %s", title, e)
