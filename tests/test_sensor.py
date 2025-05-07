@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from custom_components.deye_inverter.sensor import DeyeInverterSensor
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -9,9 +9,9 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 def mock_coordinator():
     coordinator = MagicMock(spec=DataUpdateCoordinator)
     coordinator.data = {
-        0x00BA: 500,   # PV1 power
-        0x00BB: 300,   # PV2 power
-        0x00BC: 100,   # Battery power
+        "PV1 Power": 500,
+        "PV2 Power": 300,
+        "Battery Power": 100,
     }
     coordinator.serial = "ABC123"
     coordinator.last_update_success = True
@@ -28,18 +28,12 @@ def test_sensor_properties(mock_coordinator):
     assert sensor.should_poll is False
     assert sensor.available is True
 
-@patch("custom_components.deye_inverter.sensor._DEFINITIONS", [
-    {
-        "items": [
-            {
-                "titleEN": "Battery Power",
-                "registers": ["00BC"],
-            }
-        ]
-    }
-])
 def test_extra_state_attributes(mock_coordinator):
     """Test that extra attributes are populated."""
+    mock_coordinator.data = {
+        "Battery Power": 100,
+        "attribution": "Data provided by Deye inverter via Modbus TCP"
+    }
     sensor = DeyeInverterSensor(mock_coordinator)
     attrs = sensor.extra_state_attributes
 
