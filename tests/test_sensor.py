@@ -21,7 +21,7 @@ def test_sensor_properties(mock_coordinator):
     """Test core sensor properties like name, unique_id, native_value."""
     sensor = DeyeInverterSensor(mock_coordinator)
 
-    assert sensor.name == "Deye Inverter ABC123"
+    assert sensor.device_info["name"] == "Deye Inverter ABC123"
     assert sensor.unique_id == "deye_inverter_ABC123"
     assert sensor.native_value == 800
     assert sensor.native_unit_of_measurement == "W"
