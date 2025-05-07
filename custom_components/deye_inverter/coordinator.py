@@ -13,8 +13,8 @@ _LOGGER = logging.getLogger(__name__)
 
 class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
     """
-    Coordinator asíncrono para datos del inversor.
-    Ahora utiliza InverterData que requiere host, port y serial.
+    Asynchronous coordinator for inverter data.
+    Uses InverterData which requires host, port, and serial.
     """
 
     def __init__(
@@ -25,12 +25,10 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         serial: str,
         installed_power: float,
     ) -> None:
-        # Inicializamos el cliente con host, puerto y serial
         self.inverter = InverterData(host, port, serial)
-
-        # Exponemos estos atributos para que los sensores puedan usarlos
         self.serial = serial
         self.installed_power = installed_power
+        self._last_known_data: Dict[str, Any] = {}
 
         super().__init__(
             hass,
@@ -41,10 +39,15 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
 
     async def _async_update_data(self) -> Dict[str, Any]:
         """
-        Llamada periódica: obtiene los datos y maneja errores.
+        Periodic call: fetch data and handle errors.
+        Returns last known data on failure to avoid sensor 'unavailable'.
         """
         try:
-            return await self.inverter.fetch_data()
+            data = await self.inverter.fetch_data()
+            self._last_known_data = data
+            return data
         except Exception as err:
-            _LOGGER.error("Error actualizando datos del inversor: %s", err)
-            raise UpdateFailed(err)
+            _LOGGER.warning("Modbus read failed, using last known data: %s", err)
+            if self._last_known_data:
+                return self._last_known_data
+            raise UpdateFailed("Initial Modbus read failed with no backup: %s" % err)

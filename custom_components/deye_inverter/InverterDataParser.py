@@ -73,6 +73,41 @@ def combine_registers(registers: List[int], signed: bool = True) -> int:
     return value
 
 
+def parse_battery_status(value: int) -> str:
+    if value > 0:
+        return "Discharge"
+    elif value < 0:
+        return "Charge"
+    else:
+        return "Stand-by"
+
+
+def parse_grid_status(value: int) -> str:
+    if value > 0:
+        return "BUY"
+    elif value < 0:
+        return "SELL"
+    else:
+        return "Stand-by"
+
+
+def parse_smartload_status(value: int) -> str:
+    if value == 1:
+        return "ON"
+    elif value == 0:
+        return "OFF"
+    else:
+        return f"Unknown ({value})"
+
+
+def parse_grid_connected_status(value: int) -> str:
+    return "On-Grid" if value == 1 else "Off-Grid"
+
+
+def parse_gen_connected_status(value: int) -> str:
+    return "On" if value == 1 else "Off"
+
+
 def parse_raw(raw: List[int]) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
     first_len = 0x0070 - 0x003B + 1
@@ -139,8 +174,25 @@ def parse_raw(raw: List[int]) -> Dict[str, Any]:
 
                 raw_int = combine_registers(block, signed=signed)
 
-                # Enum mapping by (register, title)
+                # Custom logic overrides
                 reg_key = int(registers[0], 16)
+                if reg_key == 0x00BE and title == "Battery Status":
+                    result[title] = f"{parse_battery_status(raw_int)} ({raw_int})"
+                    continue
+                if reg_key == 0x00A9 and title == "Grid Status":
+                    result[title] = f"{parse_grid_status(raw_int)} ({raw_int})"
+                    continue
+                if reg_key == 0x00C3 and title == "SmartLoad Enable Status":
+                    result[title] = f"{parse_smartload_status(raw_int)}"
+                    continue
+                if reg_key == 0x00C2 and title == "Grid-connected Status":
+                    result[title] = f"{parse_grid_connected_status(raw_int)}"
+                    continue
+                if reg_key == 0x00A6 and title == "Gen-connected Status":
+                    result[title] = f"{parse_gen_connected_status(raw_int)}"
+                    continue
+
+                # Enum mapping by (register, title)
                 mapping = _ENUM_MAPPINGS.get((reg_key, title))
                 if mapping and raw_int in mapping:
                     result[title] = f"{mapping[raw_int]} ({raw_int})"
