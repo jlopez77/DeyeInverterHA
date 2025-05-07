@@ -62,7 +62,9 @@ for section in _sections:
                     continue
 
 
-def combine_registers(registers: List[int], signed: bool = True, reverse: bool = False) -> int:
+def combine_registers(
+    registers: List[int], signed: bool = True, reverse: bool = False
+) -> int:
     if reverse and len(registers) == 2:
         registers = list(reversed(registers))
     value = 0
@@ -119,7 +121,7 @@ def parse_raw(raw: List[int]) -> Dict[str, Any]:
         "Total Load Consumption",
         "Total Energy Sold",
         "Total Energy Bought",
-        "Total Grid Production"
+        "Total Grid Production",
     }
 
     if isinstance(_DEFINITIONS, dict):
@@ -217,9 +219,7 @@ def parse_raw(raw: List[int]) -> Dict[str, Any]:
                     result[title] = raw_int
                     continue
 
-                if title in [
-                    "Total Grid Production"
-                ]:
+                if title in ["Total Grid Production"]:
                     val = raw_int * ratio + offset
                     result[title] = f"{round(val, 2)} (raw: {raw_int})"
                 else:
