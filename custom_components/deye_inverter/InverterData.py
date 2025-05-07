@@ -32,7 +32,7 @@ class InverterData:
             logger=_LOGGER,
         )
 
-    async def fetch_data(self) -> Dict[int, Any]:
+    async def fetch_data(self) -> Dict[str, Any]:
         """Lee dos bloques de registros y retorna el dict parseado."""
         loop = asyncio.get_running_loop()
         first_addr = 0x003B
