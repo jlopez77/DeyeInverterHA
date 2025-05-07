@@ -39,7 +39,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[int, Any]]):
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
 
-    async def _async_update_data(self) -> Dict[int, Any]:
+    async def _async_update_data(self) -> Dict[str, Any]:
         """
         Llamada periódica: obtiene los datos y maneja errores.
         """

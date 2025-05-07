@@ -37,7 +37,6 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
         """Initialize the sensor with coordinator and set metadata."""
         super().__init__(coordinator)
         serial = getattr(coordinator, "serial", "unknown")
-        # self._attr_name = f"Deye Inverter {serial}"
         self._attr_unique_id = f"deye_inverter_{serial}"
         self._attr_native_unit_of_measurement = UnitOfPower.WATT
         self._attr_device_class = SensorDeviceClass.POWER
@@ -58,7 +57,7 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
     @property
     def native_value(self) -> float:
         """Return the sum of PV1 and PV2 power as the main sensor value."""
-        data = self.coordinator.data
+        data: dict[str, Any] = self.coordinator.data
         try:
             return float(data.get("PV1 Power", 0.0)) + float(data.get("PV2 Power", 0.0))
         except (TypeError, ValueError):
@@ -67,6 +66,7 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return all other inverter parameters as state attributes."""
+        data: dict[str, Any] = self.coordinator.data
         attrs: dict[str, Any] = {}
         sections: Union[List[Any], Any] = (
             _DEFINITIONS.values() if isinstance(_DEFINITIONS, dict) else _DEFINITIONS
@@ -77,7 +77,7 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
                 title = item.get("titleEN")
                 if not title:
                     continue
-                value = self.coordinator.data.get(title)
+                value = data.get(title)
                 if value is not None:
                     attrs[title] = value
 
