@@ -57,7 +57,7 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
     @property
     def native_value(self) -> float:
         """Return the sum of PV1 and PV2 power as the main sensor value."""
-        data: dict[str, Any] = self.coordinator.data
+        data = self.coordinator.data
         try:
             return float(data.get("PV1 Power", 0.0)) + float(data.get("PV2 Power", 0.0))
         except (TypeError, ValueError):

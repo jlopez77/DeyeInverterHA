@@ -11,7 +11,7 @@ from .InverterData import InverterData
 _LOGGER = logging.getLogger(__name__)
 
 
-class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[int, Any]]):
+class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
     """
     Coordinator asíncrono para datos del inversor.
     Ahora utiliza InverterData que requiere host, port y serial.
