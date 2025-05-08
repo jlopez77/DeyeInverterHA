@@ -306,3 +306,51 @@ def test_parse_raw_block_empty_and_ascii_fallback(monkeypatch):
     raw = [0x0000] * 249
     result = parse_raw(raw)
     assert result["ASCII Fallback"].startswith("0x")
+
+@patch("importlib.resources.read_text", side_effect=Exception("pkg fail"))
+@patch("pathlib.Path.read_text", side_effect=Exception("path fail"))
+def test_load_definitions_all_fail(mock_path_read, mock_pkg_read, caplog):
+    with caplog.at_level("ERROR"):
+        result = _load_definitions()
+        assert result == {}
+        assert "Could not read DYRealTime.txt" in caplog.text
+
+
+def test_parse_raw_invalid_definitions_type_logs(monkeypatch, caplog):
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", 1234)
+    with caplog.at_level("ERROR"):
+        result = parse_raw([])
+        assert result == {}
+        assert "Invalid definitions type" in caplog.text
+
+
+def test_parse_raw_offset_cast_fails(monkeypatch, caplog):
+    fake_defs = [{
+        "section": "X",
+        "items": [{
+            "titleEN": "Bad Offset",
+            "registers": ["0x003B"],
+            "offset": "not_a_float"
+        }]
+    }]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    with caplog.at_level("DEBUG"):
+        result = parse_raw([1])
+        assert "Bad Offset" not in result
+        assert "Error parsing Bad Offset" in caplog.text
+
+
+def test_parse_raw_reversed_field(monkeypatch):
+    fake_defs = [{
+        "section": "Reversed",
+        "items": [{
+            "titleEN": "Total Energy Bought",
+            "registers": ["0x003B", "0x003C"],
+            "ratio": 1,
+            "signed": False,
+        }]
+    }]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw([0x0001, 0x0002])
+    assert "Total Energy Bought" in result
+    assert result["Total Energy Bought"] == 131073.0  # 0x00020001
