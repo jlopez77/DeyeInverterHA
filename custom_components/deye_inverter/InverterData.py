@@ -17,7 +17,13 @@ class InverterData:
     which handles framing, unit id, and checksum internally.
     """
 
-    def __init__(self, host: str, port: int = 8899, serial: str = "1", hass=None, config_entry=None):
+    def __init__(
+        self, host: str,
+        port: int = 8899,
+        serial: str = "1",
+        hass=None,
+        config_entry=None
+    ):
         self._host = host
         self._port = port
         self._serial = int(serial)
@@ -53,13 +59,19 @@ class InverterData:
         try:
             regs1 = await loop.run_in_executor(None, read_block, first_addr, first_len)
             await asyncio.sleep(0.1)
-            regs2 = await loop.run_in_executor(None, read_block, second_addr, second_len)
+            regs2 = await loop.run_in_executor(
+                None,
+                read_block,
+                second_addr,
+                second_len
+            )
             self._error_count = 0  # Reset on success
         except Exception as e:
             _LOGGER.error("Error reading registers: %s", e)
             self._error_count += 1
             if self._error_count >= self._max_errors:
-                _LOGGER.error("Max consecutive read errors reached (%d). Reloading integration.", self._max_errors)
+                _LOGGER.error("Max consecutive read errors reached (%d). \
+                               Reloading integration.", self._max_errors)
                 await self._trigger_reload()
             raise ModbusException(e)
 
@@ -73,7 +85,7 @@ class InverterData:
 
     async def _trigger_reload(self):
         if not self._hass or not self._config_entry:
-            _LOGGER.error("Cannot reload integration: 'hass' or 'config_entry' is missing.")
+            _LOGGER.error("Cannot reload: 'hass' or 'config_entry' is missing.")
             return
         await self._hass.services.async_call(
             "homeassistant",
