@@ -271,3 +271,18 @@ def test_parse_raw_out_of_bounds(monkeypatch):
     monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
     result = parse_raw([1])
     assert "Out of Bounds" not in result 
+
+def test_parse_raw_index_but_block_empty(monkeypatch):
+    fake_defs = [{
+        "section": "BlockEmpty",
+        "items": [{
+            "titleEN": "Missing Block",
+            "registers": ["0x00F8"],  # Valid register -> idx = 248
+            "parserRule": 1
+        }]
+    }]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+
+    # Raw too short for idx=248, so block will be empty
+    result = parse_raw([0] * 100)
+    assert "Missing Block" not in result
