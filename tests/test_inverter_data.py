@@ -93,3 +93,12 @@ async def test_fetch_data_success_returns_parsed():
 
     result = await inverter.fetch_data()
     assert isinstance(result, dict)
+
+@pytest.mark.asyncio
+async def test_fetch_data_without_hass_or_entry():
+    """Ensure fetch_data works standalone without hass/config_entry (no reload logic)."""
+    inverter = InverterData(host="localhost", port=8899, serial="1")
+    inverter._modbus.read_holding_registers = MagicMock(return_value=[0] * 100)
+
+    result = await inverter.fetch_data()
+    assert isinstance(result, dict)
