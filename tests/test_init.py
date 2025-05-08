@@ -58,3 +58,35 @@ async def test_async_unload_entry():
         assert result is True
         assert entry_id not in hass.data[DOMAIN]
         mock_unload.assert_awaited_once()
+
+@pytest.mark.asyncio
+async def test_async_setup_import_creates_flow():
+    """Test YAML import triggers config flow init."""
+    hass = MagicMock()
+    hass.config_entries.flow.async_init = AsyncMock()
+    hass.async_create_task = lambda coro: coro  # Immediate execution
+
+    config = {
+        DOMAIN: {
+            "host": "1.2.3.4",
+            "port": 8899,
+            "serial": "XYZ123",
+            "installed_power": 4500,
+        }
+    }
+
+    from custom_components.deye_inverter import async_setup
+
+    result = await async_setup(hass, config)
+
+    assert result is True
+    hass.config_entries.flow.async_init.assert_awaited_once_with(
+        DOMAIN,
+        context={"source": "import"},
+        data={
+            "host": "1.2.3.4",
+            "port": 8899,
+            "serial": "XYZ123",
+            "installed_power": 4500,
+        },
+    )
