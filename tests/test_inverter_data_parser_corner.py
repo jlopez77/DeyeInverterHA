@@ -112,7 +112,8 @@ def test_parse_raw_enum_mapping(monkeypatch):
         mapping = {opt["key"]: opt["valueEN"] for opt in item["optionRanges"]}
         _ENUM_MAPPINGS[(reg, title)] = mapping
 
-    raw = [0] * (0x00F1 - 0x003B) + [2]
+    raw = [0] * 242
+    raw[241] = 2  # or 999
     result = parse_raw(raw)
     assert result["Mode Status"] == "Manual (2)"
 
@@ -144,6 +145,7 @@ def test_parse_raw_enum_unknown(monkeypatch):
         mapping = {opt["key"]: opt["valueEN"] for opt in item["optionRanges"]}
         _ENUM_MAPPINGS[(reg, title)] = mapping
 
-    raw = [0] * (0x00F1 - 0x003B) + [999]
+    raw = [0] * 242
+    raw[241] = 2  # or 999
     result = parse_raw(raw)
     assert result["Mode Status"] == "Unknown (999)"
