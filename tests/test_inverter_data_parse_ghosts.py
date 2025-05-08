@@ -22,7 +22,7 @@ def test_load_definitions_file_not_found(monkeypatch, caplog):
     reload_parser()
     # _DEFINITIONS should fall back to {}
     assert parser._DEFINITIONS == {}
-    assert "Could not read DYRealTime.txt" in caplog.text
+    assert "Could not read DYraw.txt" in caplog.text
 
 def test_load_definitions_json_decode_error(monkeypatch, caplog):
     """Cover the JSONDecodeError branch (lines ~61–62)."""
@@ -31,7 +31,7 @@ def test_load_definitions_json_decode_error(monkeypatch, caplog):
     caplog.set_level(logging.ERROR)
     reload_parser()
     assert parser._DEFINITIONS == {}
-    assert "Error parsing DYRealTime.txt" in caplog.text
+    assert "Error parsing DYraw.txt" in caplog.text
 
 @pytest.fixture(autouse=True)
 def fresh_sections(monkeypatch):
@@ -40,7 +40,7 @@ def fresh_sections(monkeypatch):
     return parser
 
 def make_section(item):
-    return {"RealTimeResponse": [item]}
+    return {"rawResponse": [item]}
 
 def test_enum_branch(monkeypatch, fresh_sections):
     """Cover the enum‐mapping branch."""
@@ -56,8 +56,8 @@ def test_enum_branch(monkeypatch, fresh_sections):
     parser._ENUM_MAPPINGS.clear()
     # re-run the enum‐mapping builder
     importlib.reload(parser)
-    # now parse_realtime should map 1 → "OK"
-    result = parser.parse_realtime([1])
+    # now parse_raw should map 1 → "OK"
+    result = parser.parse_raw([1])
     assert result["Status"] == "OK"
 
 def test_hex_branch(fresh_sections):
@@ -70,7 +70,7 @@ def test_hex_branch(fresh_sections):
             "DisplayFormat": "Hex"
         })
     ]
-    out = parser.parse_realtime([255])
+    out = parser.parse_raw([255])
     assert out["Code"] == hex(255)
 
 def test_raw_branch(fresh_sections):
@@ -83,7 +83,7 @@ def test_raw_branch(fresh_sections):
             "DisplayFormat": "Raw"
         })
     ]
-    out = parser.parse_realtime([42])
+    out = parser.parse_raw([42])
     assert out["RawVal"] == 42
 
 def test_custom_display_format(fresh_sections):
@@ -96,7 +96,7 @@ def test_custom_display_format(fresh_sections):
             "DisplayFormat": "Value={value}!"
         })
     ]
-    out = parser.parse_realtime([99])
+    out = parser.parse_raw([99])
     assert out["TempStr"] == "Value=99!"
 
 def test_time_branch(fresh_sections):
@@ -109,7 +109,7 @@ def test_time_branch(fresh_sections):
         })
     ]
     # raw_data 930 → 09:30
-    out = parser.parse_realtime([930])
+    out = parser.parse_raw([930])
     assert out["RunTime"] == "09:30"
 
 def test_percent_unit_branch(fresh_sections):
@@ -122,7 +122,7 @@ def test_percent_unit_branch(fresh_sections):
             "Unit": "%"
         })
     ]
-    out = parser.parse_realtime([50])
+    out = parser.parse_raw([50])
     # ratio default =1, offset=0 → "50.0% (raw: 50)"
     assert out["Load"].startswith("50.0%")
     assert "(raw: 50)" in out["Load"]
@@ -136,6 +136,6 @@ def test_default_numeric_branch(fresh_sections):
             "Title": "Value"
         })
     ]
-    out = parser.parse_realtime([123])
+    out = parser.parse_raw([123])
     assert isinstance(out["Value"], float)
     assert out["Value"] == 123.0
