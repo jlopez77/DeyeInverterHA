@@ -1,3 +1,0 @@
-[pytest11]
-socket=pytest_socket
-
