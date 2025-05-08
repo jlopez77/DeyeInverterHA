@@ -26,7 +26,7 @@ async def test_async_setup_entry():
     hass.data = {}
 
     with patch(
-        "custom_components.deye_inverter.__init__.DeyeDataUpdateCoordinator"
+        "custom_components.deye_inverter.coordinator.DeyeDataUpdateCoordinator"
     ) as mock_coordinator_class, patch(
         "custom_components.deye_inverter.__init__.async_forward_entry_setups", new=AsyncMock()
     ) as mock_forward:
@@ -48,15 +48,12 @@ async def test_async_unload_entry():
     """Test unloading of the integration entry."""
     hass = MagicMock()
     entry_id = "test_entry"
-    hass.data = {
-        DOMAIN: {entry_id: "coordinator_mock"}
-    }
-
-    # Patch the method directly on the mock
-    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+    hass.data = {DOMAIN: {entry_id: "coordinator_mock"}}
 
     mock_entry = MagicMock()
     mock_entry.entry_id = entry_id
+
+    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
 
     result = await async_unload_entry(hass, mock_entry)
 
