@@ -163,6 +163,10 @@ def test_parse_enum_fallback(monkeypatch):
     import custom_components.deye_inverter.InverterDataParser as parser
     importlib.reload(parser)
 
+    # Manually inject enum mapping
+    parser._ENUM_MAPPINGS.clear()
+    parser._ENUM_MAPPINGS[(0x0097, "Enum Test")] = {1: "Enabled", 2: "Disabled"}
+
     offset = (0x0070 - 0x003B + 1) + (0x0097 - 0x0096)
     raw = [0] * offset + [999]
 
