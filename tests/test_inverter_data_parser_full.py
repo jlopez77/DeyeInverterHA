@@ -164,3 +164,20 @@ def test_return_result_hit(monkeypatch):
     }])
     result = parser.parse_raw([42])
     assert result["Voltage"] == 42.0
+
+def test_return_result_is_reached(monkeypatch):
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{
+        "items": [{
+            "titleEN": "Active Power",
+            "registers": ["003B"],
+            "parserRule": 1,
+            "ratio": 1,
+            "offset": 0,
+            "signed": True
+        }]
+    }])
+    raw = [123]  # 0x003B maps to index 0
+    result = parser.parse_raw(raw)
+    assert result["Active Power"] == 123.0
