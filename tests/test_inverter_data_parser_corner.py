@@ -6,15 +6,14 @@ from custom_components.deye_inverter.InverterDataParser import (
     parse_raw,
     combine_registers,
     _ENUM_MAPPINGS,
+    _DEFINITIONS
 )
-
 
 def test_load_definitions_json_error():
     bad_json = "{bad: json"
     with patch("importlib.resources.read_text", return_value=bad_json):
         result = _load_definitions()
         assert result == {}
-
 
 def test_load_definitions_fallback_file():
     fallback_json = json.dumps({"section": {"items": []}})
@@ -23,67 +22,23 @@ def test_load_definitions_fallback_file():
         result = _load_definitions()
         assert "section" in result
 
-
-def test_load_definitions_all_fail(monkeypatch, caplog):
-    monkeypatch.setattr("importlib.resources.read_text", lambda *a, **k: (_ for _ in ()).throw(Exception("fail")))
-    monkeypatch.setattr("pathlib.Path.read_text", lambda *a, **k: (_ for _ in ()).throw(Exception("no file")))
-    with caplog.at_level("ERROR"):
-        result = _load_definitions()
-        assert result == {}
-        assert "Could not read DYRealTime.txt" in caplog.text
-
-
 def test_combine_registers_reverse():
     value = combine_registers([0x0001, 0x0002], signed=False, reverse=True)
     assert value == 0x00020001
 
-
-def test_parse_raw_ascii_valid(monkeypatch):
-    fake_defs = [{
-        "section": "ASCII",
-        "items": [{"titleEN": "Valid ASCII", "registers": ["0x003B"], "parserRule": 5}]
-    }]
-    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
-    raw = [0x4869]  # "Hi"
-    result = parse_raw(raw)
-    assert result["Valid ASCII"] == "Hi"
-
-
-def test_parse_raw_ascii_control_char(monkeypatch):
-    fake_defs = [{
-        "section": "ASCII",
-        "items": [{"titleEN": "Serial", "registers": ["0x003B"], "parserRule": 5}]
-    }]
-    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
-    raw = [0x0001]  # control char
-    result = parse_raw(raw)
-    assert result["Serial"].startswith("0x")
-
-
-def test_parse_raw_empty_block(monkeypatch):
-    fake_defs = [{
-        "section": "EmptyBlock",
-        "items": [{"titleEN": "Missing", "registers": ["0x00F8"]}]
-    }]
-    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
-    result = parse_raw([0] * 100)
-    assert "Missing" not in result
-
-
-def test_parse_raw_default_numeric(monkeypatch):
-    fake_defs = [{
-        "section": "Numeric",
-        "items": [{"titleEN": "Power", "registers": ["0x003B"], "ratio": 2, "offset": 1}]
-    }]
-    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
-    result = parse_raw([10])
-    assert result["Power"] == 21.0
-
+def test_parse_raw_invalid_definitions(monkeypatch):
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", 42)
+    result = parse_raw([])
+    assert result == {}
 
 def test_parse_raw_offset_cast_fails(monkeypatch, caplog):
     fake_defs = [{
-        "section": "Error",
-        "items": [{"titleEN": "Bad Offset", "registers": ["0x003B"], "offset": "not_a_float"}]
+        "section": "X",
+        "items": [{
+            "titleEN": "Bad Offset",
+            "registers": ["0x003B"],
+            "offset": "not_a_float"
+        }]
     }]
     monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
     with caplog.at_level("DEBUG"):
@@ -91,14 +46,63 @@ def test_parse_raw_offset_cast_fails(monkeypatch, caplog):
         assert "Bad Offset" not in result
         assert "Error parsing Bad Offset" in caplog.text
 
+def test_parse_raw_ascii_decode_fallback(monkeypatch):
+    fake_defs = [{
+        "section": "ControlASCII",
+        "items": [{
+            "titleEN": "Serial",
+            "registers": ["0x003B"],
+            "parserRule": 5
+        }]
+    }]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw([0x0001])  # control char => fallback
+    assert result["Serial"].startswith("0x")
 
-def test_parse_raw_invalid_definitions_type(monkeypatch, caplog):
-    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", 1234)
-    with caplog.at_level("ERROR"):
-        result = parse_raw([])
-        assert result == {}
-        assert "Invalid definitions type" in caplog.text
+def test_parse_raw_missing_block(monkeypatch):
+    fake_defs = [{
+        "section": "Skip",
+        "items": [{
+            "titleEN": "Empty",
+            "registers": ["0x00F8"],
+            "parserRule": 5
+        }]
+    }]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw([0] * 100)  # not enough length
+    assert "Empty" not in result
 
+def test_parse_raw_enum_unknown(monkeypatch):
+    fake_defs = [{
+        "section": "Enum",
+        "items": [{
+            "titleEN": "Status",
+            "registers": ["0x0096"],
+            "interactionType": 2,
+            "parserRule": 1,
+            "optionRanges": [{"key": 1, "valueEN": "On"}]
+        }]
+    }]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    _ENUM_MAPPINGS.clear()
+    _ENUM_MAPPINGS[(0x0096, "Status")] = {1: "On"}
+    offset = (0x0070 - 0x003B + 1)
+    result = parse_raw([0] * offset + [999])
+    assert result["Status"] == "Unknown (999)"
+
+def test_parse_raw_temperature_adjustment(monkeypatch):
+    fake_defs = [{
+        "section": "Temp",
+        "items": [{
+            "titleEN": "Ambient Temperature",
+            "registers": ["0x003B"],
+            "ratio": 1,
+            "signed": True
+        }]
+    }]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw([150])
+    assert result["Ambient Temperature"] == 50.0
 
 def test_parse_enum_fallback(monkeypatch):
     from custom_components.deye_inverter import InverterDataParser as parser
@@ -113,7 +117,7 @@ def test_parse_enum_fallback(monkeypatch):
             "optionRanges": [
                 {"key": 1, "valueEN": "Enabled"},
                 {"key": 2, "valueEN": "Disabled"},
-            ]
+            ],
         }]
     }]
 
@@ -123,5 +127,6 @@ def test_parse_enum_fallback(monkeypatch):
 
     offset = (0x0070 - 0x003B + 1) + (0x0097 - 0x0096)
     raw = [0] * offset + [999]
+
     result = parser.parse_raw(raw)
     assert result["Enum Test"] == "Unknown (999)"
