@@ -120,3 +120,36 @@ def test_total_grid_production(monkeypatch):
     result = parser.parse_raw([0x0001, 0x0002])
     assert "Total Grid Production" in result
     assert "(raw:" in result["Total Grid Production"]
+
+def test_load_definitions_full_fallback(monkeypatch, caplog):
+    monkeypatch.setattr(parser.pkg_resources, "read_text", lambda *a, **k: (_ for _ in ()).throw(Exception("pkg fail")))
+    monkeypatch.setattr(parser.Path, "read_text", lambda *a, **k: (_ for _ in ()).throw(Exception("file fail")))
+    caplog.set_level("ERROR")
+    result = parser._load_definitions()
+    assert result == {}
+    assert "Could not read DYRealTime.txt" in caplog.text
+
+def test_ascii_parser_rule_fallback(monkeypatch):
+    # 0x0001 = SOH = non-printable ASCII -> fallback to hex
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{
+        "items": [{
+            "titleEN": "Serial",
+            "parserRule": 5,
+            "registers": ["003B"]
+        }]
+    }])
+    result = parser.parse_raw([0x0001])
+    assert result["Serial"].startswith("0x")
+
+def test_parse_raw_returns_valid_field(monkeypatch):
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{
+        "items": [{
+            "titleEN": "Simple",
+            "registers": ["003B"],
+            "ratio": 1
+        }]
+    }])
+    result = parser.parse_raw([42])
+    assert result["Simple"] == 42.0
+
+
