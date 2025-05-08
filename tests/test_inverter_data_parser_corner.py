@@ -64,7 +64,7 @@ def test_parse_raw_battery_status_positive(monkeypatch):
     ]
     monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
     # Offset from 0x003B to 0x00BE = 131
-    raw = [0] * 131 + [3]  # Positive → "Discharge"
+    raw = [0] * 94 + [3]  # Positive → "Discharge"
     result = parse_raw(raw)
     assert result["Battery Status"].startswith("Discharge")
 
