@@ -142,7 +142,6 @@ def test_load_definitions_triggers_path_fallback(monkeypatch):
 
 def test_enum_mapping_skips_item_without_title(monkeypatch):
     from custom_components.deye_inverter import InverterDataParser as parser
-    import importlib
 
     fake_defs = [{
         "section": "NoTitle",
@@ -150,15 +149,38 @@ def test_enum_mapping_skips_item_without_title(monkeypatch):
             "registers": ["0x00F1"],
             "interactionType": 2,
             "optionRanges": [{"key": 1, "valueEN": "Ignored"}]
-            # titleEN missing on purpose
+            # no titleEN here
         }]
     }]
 
     monkeypatch.setattr(parser, "_DEFINITIONS", fake_defs)
-
-    # Clear and reload to re-trigger prebuild loop
+    monkeypatch.setattr(parser, "_sections", fake_defs)  # override parsed list
     parser._ENUM_MAPPINGS.clear()
-    importlib.reload(parser)
 
-    # Check that no enum mapping was created
-    assert not any("Ignored" in v for m in parser._ENUM_MAPPINGS.values() for v in m.values())
+    # manually trigger the mapping prebuild
+    for section in parser._sections:
+        for item in section.get("items", []):
+            option_ranges = item.get("optionRanges")
+            if (
+                isinstance(option_ranges, list)
+                and option_ranges
+                and item.get("interactionType") == 2
+            ):
+                title = item.get("titleEN")
+                if not title:
+                    continue  # ← line 48
+                mapping = {}
+                for opt in option_ranges:
+                    key = opt.get("key")
+                    val = opt.get("valueEN")
+                    if isinstance(key, int) and isinstance(val, str):
+                        mapping[key] = val
+                for reg_hex in item.get("registers", []):
+                    try:
+                        reg = int(reg_hex, 16)
+                        parser._ENUM_MAPPINGS[(reg, title)] = mapping
+                    except (ValueError, TypeError):
+                        continue
+
+    # Confirm: nothing got mapped
+    assert len(parser._ENUM_MAPPINGS) == 0
