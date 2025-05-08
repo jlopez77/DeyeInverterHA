@@ -356,21 +356,20 @@ def test_parse_raw_reversed_field(monkeypatch):
     assert result["Total Energy Bought"] == 131073.0  # 0x00020001
 
 def test_enum_mapping_register_parse_error(monkeypatch):
-    # Triggers line 48
     monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", [{
         "section": "BadEnum",
         "items": [{
             "titleEN": "Bad Enum",
             "interactionType": 2,
             "optionRanges": [{"key": 1, "valueEN": "Test"}],
-            "registers": ["0xZZZZ"]  # Will trigger ValueError
+            "registers": ["not_a_hex"],  # Invalid register string triggers ValueError
         }]
     }])
-    # Re-import the file so the mapping is rebuilt
     import importlib
     import custom_components.deye_inverter.InverterDataParser as parser
     importlib.reload(parser)
-    assert (0xZZZZ, "Bad Enum") not in parser._ENUM_MAPPINGS  # Should not crash
+    # Nothing should crash and the bad key won't be in the mapping
+    assert not any("Bad Enum" in k[1] for k in parser._ENUM_MAPPINGS)
 
 
 def test_ascii_control_char_output(monkeypatch):
