@@ -2,9 +2,15 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import UpdateFailed
-from homeassistant.helpers.test_config_entry import MockConfigEntry
 
 from custom_components.deye_inverter.coordinator import DeyeDataUpdateCoordinator
+
+# Minimal local definition of MockConfigEntry
+class MockConfigEntry:
+    def __init__(self, domain, data, entry_id="test_entry"):
+        self.domain = domain
+        self.data = data
+        self.entry_id = entry_id
 
 @pytest.fixture
 def mock_hass():
