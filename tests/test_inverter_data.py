@@ -1,8 +1,10 @@
 import pytest
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
+from pymodbus.exceptions import ModbusException
 from custom_components.deye_inverter.InverterData import InverterData
 
-# Patch PySolarmanV5 to avoid real socket usage in test environment
+# Auto-patch PySolarmanV5 to prevent real socket usage
 @pytest.fixture(autouse=True)
 def patch_pysolarmanv5():
     with patch("custom_components.deye_inverter.InverterData.PySolarmanV5") as mock_class:
@@ -16,7 +18,6 @@ async def test_trigger_reload_after_max_errors():
     """Test that integration reload is triggered after max consecutive read errors."""
     hass = MagicMock()
     hass.services.async_call = AsyncMock()
-
     config_entry = MagicMock()
     config_entry.entry_id = "test_entry"
 
@@ -28,7 +29,6 @@ async def test_trigger_reload_after_max_errors():
         config_entry=config_entry,
     )
 
-    # Attempt 5 reads to exceed the max error threshold
     for _ in range(5):
         with pytest.raises(Exception):
             await inverter.fetch_data()
@@ -56,8 +56,20 @@ async def test_no_reload_before_threshold():
         config_entry=config_entry,
     )
 
-    for _ in range(3):  # fewer than max_errors
+    for _ in range(3):
         with pytest.raises(Exception):
             await inverter.fetch_data()
 
     hass.services.async_call.assert_not_called()
+
+@pytest.mark.asyncio
+async def test_fetch_data_logs_error_and_raises(caplog):
+    """Test that fetch_data logs the error and raises ModbusException."""
+    inverter = InverterData(host="localhost", port=8899, serial="1")
+    inverter._modbus.read_holding_registers = MagicMock(side_effect=RuntimeError("Test failure"))
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(ModbusException):
+            await inverter.fetch_data()
+
+    assert "Error leyendo registros: Test failure" in caplog.text
