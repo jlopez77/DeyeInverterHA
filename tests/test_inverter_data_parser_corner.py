@@ -113,7 +113,7 @@ def test_parse_raw_enum_mapping(monkeypatch):
         _ENUM_MAPPINGS[(reg, title)] = mapping
 
     raw = [0] * 242
-    raw[241] = 2  # or 999
+    raw[241] = 2 
     result = parse_raw(raw)
     assert result["Mode Status"] == "Manual (2)"
 
@@ -146,6 +146,6 @@ def test_parse_raw_enum_unknown(monkeypatch):
         _ENUM_MAPPINGS[(reg, title)] = mapping
 
     raw = [0] * 242
-    raw[241] = 2  # or 999
+    raw[241] = 999
     result = parse_raw(raw)
     assert result["Mode Status"] == "Unknown (999)"
