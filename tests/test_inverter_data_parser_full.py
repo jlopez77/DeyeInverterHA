@@ -153,31 +153,24 @@ def test_parse_raw_returns_valid_field(monkeypatch):
     assert result["Simple"] == 42.0
 
 
-def test_return_result_hit(monkeypatch):
-    monkeypatch.setattr(parser, "_DEFINITIONS", [{
-        "items": [{
-            "titleEN": "Voltage",
-            "registers": ["003B"],
-            "ratio": 1.0,
-            "offset": 0
-        }]
-    }])
-    result = parser.parse_raw([42])
-    assert result["Voltage"] == 42.0
-
-def test_return_result_is_reached(monkeypatch):
+def test_parse_raw_reaches_return(monkeypatch):
     from custom_components.deye_inverter import InverterDataParser as parser
 
+    # Definition with no special handling
     monkeypatch.setattr(parser, "_DEFINITIONS", [{
         "items": [{
-            "titleEN": "Active Power",
+            "titleEN": "Generic Field",
             "registers": ["003B"],
-            "parserRule": 1,
             "ratio": 1,
             "offset": 0,
-            "signed": True
+            "signed": True,
+            # No parserRule, no special title
         }]
     }])
+
+    raw = [42]  # Will be parsed as-is
+    result = parser.parse_raw(raw)
+    assert result == {"Generic Field": 42.0}
     raw = [123]  # 0x003B maps to index 0
     result = parser.parse_raw(raw)
     assert result["Active Power"] == 123.0
