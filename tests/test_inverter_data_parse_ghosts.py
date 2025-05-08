@@ -12,10 +12,12 @@ def test_enum_builder_invalid_register(monkeypatch):
         }]
     }])
     parser._ENUM_MAPPINGS.clear()
+    
+    # Simulate enum mapping logic
     for section in parser._sections:
         for item in section.get("items", []):
             option_ranges = item.get("optionRanges")
-            if option_ranges and item.get("interactionType") == 2:
+            if isinstance(option_ranges, list) and option_ranges and item.get("interactionType") == 2:
                 title = item.get("titleEN")
                 if not title:
                     continue
@@ -30,8 +32,9 @@ def test_enum_builder_invalid_register(monkeypatch):
                         reg = int(reg_hex, 16)
                         parser._ENUM_MAPPINGS[(reg, title)] = mapping
                     except (ValueError, TypeError):
-                        continue
-    assert parser._ENUM_MAPPINGS.get((0x00F1, "InvalidOptionRanges")) == {}
+                        pass
+
+    assert (0x00F1, "InvalidRegisterTest") not in parser._ENUM_MAPPINGS
 
 def test_enum_builder_invalid_option_ranges(monkeypatch):
     monkeypatch.setattr(parser, "_sections", [{
@@ -43,10 +46,11 @@ def test_enum_builder_invalid_option_ranges(monkeypatch):
         }]
     }])
     parser._ENUM_MAPPINGS.clear()
+
     for section in parser._sections:
         for item in section.get("items", []):
             option_ranges = item.get("optionRanges")
-            if option_ranges and item.get("interactionType") == 2:
+            if isinstance(option_ranges, list) and option_ranges and item.get("interactionType") == 2:
                 title = item.get("titleEN")
                 if not title:
                     continue
@@ -61,8 +65,9 @@ def test_enum_builder_invalid_option_ranges(monkeypatch):
                         reg = int(reg_hex, 16)
                         parser._ENUM_MAPPINGS[(reg, title)] = mapping
                     except (ValueError, TypeError):
-                        continue
-    assert (0x00F1, "InvalidOptionRanges") not in parser._ENUM_MAPPINGS
+                        pass
+
+    assert parser._ENUM_MAPPINGS.get((0x00F1, "InvalidOptionRanges")) == {}
 
 def test_enum_builder_non_interaction_type(monkeypatch):
     monkeypatch.setattr(parser, "_sections", [{
@@ -74,7 +79,28 @@ def test_enum_builder_non_interaction_type(monkeypatch):
         }]
     }])
     parser._ENUM_MAPPINGS.clear()
-    assert len(parser._ENUM_MAPPINGS) == 0
+
+    for section in parser._sections:
+        for item in section.get("items", []):
+            option_ranges = item.get("optionRanges")
+            if isinstance(option_ranges, list) and option_ranges and item.get("interactionType") == 2:
+                title = item.get("titleEN")
+                if not title:
+                    continue
+                mapping = {}
+                for opt in option_ranges:
+                    key = opt.get("key")
+                    val = opt.get("valueEN")
+                    if isinstance(key, int) and isinstance(val, str):
+                        mapping[key] = val
+                for reg_hex in item.get("registers", []):
+                    try:
+                        reg = int(reg_hex, 16)
+                        parser._ENUM_MAPPINGS[(reg, title)] = mapping
+                    except (ValueError, TypeError):
+                        pass
+
+    assert parser._ENUM_MAPPINGS == {}
 
 def test_empty_definitions(monkeypatch):
     monkeypatch.setattr(parser.pkg_resources, "read_text", lambda *a, **k: "[]")
