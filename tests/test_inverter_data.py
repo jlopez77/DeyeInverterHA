@@ -124,3 +124,15 @@ async def test_fetch_data_success_no_reload_trigger():
 
     assert isinstance(result, dict)
     hass.services.async_call.assert_not_called()
+
+@pytest.mark.asyncio
+async def test_trigger_reload_logs_error_if_missing_parts(caplog):
+    """Ensure reload logs an error and exits if hass or config_entry is missing."""
+    inverter = InverterData(host="localhost", port=8899, serial="1")
+    inverter._hass = None  # Explicitly missing
+    inverter._config_entry = None
+
+    with caplog.at_level(logging.ERROR):
+        await inverter._trigger_reload()
+
+    assert "Cannot reload: 'hass' or 'config_entry' is missing." in caplog.text
