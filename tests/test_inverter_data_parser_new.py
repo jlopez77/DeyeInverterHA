@@ -151,3 +151,16 @@ def test_enum_mapping_skips_item_without_title(monkeypatch):
                 # would map here otherwise
 
     assert len(parser._ENUM_MAPPINGS) == 0
+
+def test_parse_skips_item_with_no_registers(monkeypatch):
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{
+        "items": [{
+            "titleEN": "NoRegsField"
+            # No "registers" key at all
+        }]
+    }])
+
+    result = parser.parse_raw([123])
+    assert "NoRegsField" not in result
