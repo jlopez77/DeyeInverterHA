@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import UpdateFailed
-from tests.common import MockConfigEntry
+from homeassistant.helpers.test_config_entry import MockConfigEntry
 
 from custom_components.deye_inverter.coordinator import DeyeDataUpdateCoordinator
 
