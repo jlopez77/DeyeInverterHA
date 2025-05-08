@@ -1,5 +1,5 @@
 import pytest
-from custom_components.deye_inverter.InverterDataParser import parse_raw
+from custom_components.deye_inverter.InverterDataParser import parse_raw, _ENUM_MAPPINGS
 
 def test_parse_enum_fallback(monkeypatch):
     """Test that unknown enum values return 'Unknown (...)'."""
@@ -20,12 +20,20 @@ def test_parse_enum_fallback(monkeypatch):
             ],
         }
     ]
-    # 0x0097 is inside the second register block
-    offset = (0x0070 - 0x003B + 1) + (0x0097 - 0x0096)
-    raw = [0] * offset + [999]
+
+    # Patch the definitions
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_def
     )
+
+    # Patch the _ENUM_MAPPINGS manually
+    _ENUM_MAPPINGS.clear()
+    _ENUM_MAPPINGS[(0x0097, "Enum Test")] = {1: "Enabled", 2: "Disabled"}
+
+    # Calculate correct offset for register 0x0097
+    offset = (0x0070 - 0x003B + 1) + (0x0097 - 0x0096)
+    raw = [0] * offset + [999]
+
     result = parse_raw(raw)
     assert result["Enum Test"] == "Unknown (999)"
 
