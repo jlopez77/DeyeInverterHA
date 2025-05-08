@@ -78,3 +78,46 @@ def test_parse_raw_catches_exception(monkeypatch, caplog):
     result = parser.parse_raw([1])
     assert "CrashingField" not in result
     assert "Error parsing CrashingField" in caplog.text
+
+def test_parse_raw_skips_item_without_title(monkeypatch):
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{"items": [{"registers": ["003B"]}]}])
+    result = parser.parse_raw([0])
+    assert result == {}
+
+def test_parse_raw_skips_item_without_registers(monkeypatch):
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{"items": [{"titleEN": "NoRegs"}]}])
+    result = parser.parse_raw([0])
+    assert "NoRegs" not in result
+
+def test_parser_rule_6(monkeypatch):
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{
+        "items": [{
+            "titleEN": "Bitfield",
+            "parserRule": 6,
+            "registers": ["003B"]
+        }]
+    }])
+    result = parser.parse_raw([123])
+    assert result["Bitfield"] == 123
+
+def test_parse_raw_catches_exception(monkeypatch, caplog):
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    caplog.set_level("DEBUG")
+
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{
+        "items": [{
+            "titleEN": "CrashingField",
+            "registers": ["003B"],
+            "ratio": "not_a_float"
+        }]
+    }])
+    result = parser.parse_raw([1])
+    assert "CrashingField" not in result
+    assert "Error parsing CrashingField" in caplog.text
