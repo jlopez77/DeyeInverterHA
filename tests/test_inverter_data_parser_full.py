@@ -172,3 +172,26 @@ def test_parse_raw_reaches_return(monkeypatch):
 
     # This will hit the default numeric parse path and reach return
     assert result == {"Generic Field": 123.0}
+
+def test_parse_raw_forces_return_path(monkeypatch):
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{
+        "items": [
+            {
+                "titleEN": "First",
+                "registers": ["003B"],
+                "parserRule": 6  # triggers continue
+            },
+            {
+                "titleEN": "Final",
+                "registers": ["003C"],
+                "ratio": 1,
+                "offset": 0,
+                "signed": True
+            }
+        ]
+    }])
+
+    result = parser.parse_raw([99, 42])
+    assert result == {"First": 99, "Final": 42.0}
