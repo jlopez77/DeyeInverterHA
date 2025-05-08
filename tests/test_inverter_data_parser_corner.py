@@ -139,3 +139,26 @@ def test_load_definitions_triggers_path_fallback(monkeypatch):
 
     result = parser._load_definitions()
     assert "section" in result
+
+def test_enum_mapping_skips_item_without_title(monkeypatch):
+    from custom_components.deye_inverter import InverterDataParser as parser
+    import importlib
+
+    fake_defs = [{
+        "section": "NoTitle",
+        "items": [{
+            "registers": ["0x00F1"],
+            "interactionType": 2,
+            "optionRanges": [{"key": 1, "valueEN": "Ignored"}]
+            # titleEN missing on purpose
+        }]
+    }]
+
+    monkeypatch.setattr(parser, "_DEFINITIONS", fake_defs)
+
+    # Clear and reload to re-trigger prebuild loop
+    parser._ENUM_MAPPINGS.clear()
+    importlib.reload(parser)
+
+    # Check that no enum mapping was created
+    assert not any("Ignored" in v for m in parser._ENUM_MAPPINGS.values() for v in m.values())
