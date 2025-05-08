@@ -9,7 +9,7 @@ def test_parse_enum_fallback(monkeypatch):
             "items": [
                 {
                     "titleEN": "Enum Test",
-                    "registers": ["0x00F1"],
+                    "registers": ["0x0097"],
                     "interactionType": 2,
                     "parserRule": 1,
                     "optionRanges": [
@@ -20,8 +20,9 @@ def test_parse_enum_fallback(monkeypatch):
             ],
         }
     ]
-    # Simulate raw[0x00F1 - 0x003B] = 999
-    raw = [0] * (0x00F1 - 0x003B) + [999]
+    # 0x0097 is inside the second register block
+    offset = (0x0070 - 0x003B + 1) + (0x0097 - 0x0096)
+    raw = [0] * offset + [999]
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_def
     )
@@ -43,7 +44,7 @@ def test_parse_reverse_and_ratio(monkeypatch):
             ],
         }
     ]
-    raw = [0] * (0x003F - 0x003B) + [0x5678, 0x1234]  # reversed = 0x12345678 = 305419896
+    raw = [0] * (0x003F - 0x003B) + [0x5678, 0x1234]  # reversed = 0x12345678
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_def
     )
@@ -67,7 +68,8 @@ def test_parse_temperature_offset(monkeypatch):
             ],
         }
     ]
-    raw = [0] * (0x00B6 - 0x0096 + (0x0096 - 0x003B)) + [500]  # 500 * 0.1 - 100 = -50
+    # 0x00B6 is in second block, so index = 54 + (0x00B6 - 0x0096) = 86
+    raw = [0] * 86 + [500]  # 500 * 0.1 - 100 = -50.0
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_def
     )
