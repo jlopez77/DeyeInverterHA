@@ -43,13 +43,16 @@ def test_parse_raw_with_empty():
 @pytest.mark.parametrize(
     "raw, expected",
     [
-        # ASCII rule
+        # ASCII rule (Device Name)
         ([0x4142, 0x4300], {"Device Name": "ABC"}),
-        # Battery Status
-        ([0] * (0x00BE - 0x003B) + [5], {"Battery Status": "Discharge (5)"}),
-        # Grid-connected Status
-        ([0] * (0x00C2 - 0x003B) + [0], {"Grid-connected Status": "Off-Grid"}),
-        # Bitfield rule
+
+        # Battery Status (0x00BE = index 94 in full raw list)
+        ([0] * 94 + [5], {"Battery Status": "Discharge (5)"}),
+
+        # Grid-connected Status (0x00C2 = 98)
+        ([0] * 98 + [0], {"Grid-connected Status": "Off-Grid"}),
+
+        # Bitfield / parserRule 6
         ([0] * 20 + [0x00FF], {"Alarm Flags": 255}),
     ],
 )
