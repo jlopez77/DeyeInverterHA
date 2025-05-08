@@ -122,3 +122,32 @@ def test_parse_raw_final_return(monkeypatch):
     result = parser.parse_raw([99, 42])
     assert result["Bitfield"] == 99
     assert result["FinalField"] == 42.0
+
+def test_enum_mapping_skips_item_without_title(monkeypatch):
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    # Patch `_sections` to include an item with no titleEN
+    monkeypatch.setattr(parser, "_sections", [{
+        "items": [{
+            "interactionType": 2,
+            "optionRanges": [{"key": 1, "valueEN": "Ignored"}],
+            "registers": ["0x00F1"]
+            # No "titleEN"
+        }]
+    }])
+
+    parser._ENUM_MAPPINGS.clear()
+    for section in parser._sections:
+        for item in section.get("items", []):
+            option_ranges = item.get("optionRanges")
+            if (
+                isinstance(option_ranges, list)
+                and option_ranges
+                and item.get("interactionType") == 2
+            ):
+                title = item.get("titleEN")
+                if not title:  # ← LINE 48
+                    continue
+                # would map here otherwise
+
+    assert len(parser._ENUM_MAPPINGS) == 0
