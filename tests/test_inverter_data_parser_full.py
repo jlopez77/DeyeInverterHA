@@ -195,3 +195,25 @@ def test_parse_raw_forces_return_path(monkeypatch):
 
     result = parser.parse_raw([99, 42])
     assert result == {"First": 99, "Final": 42.0}
+
+def test_parse_raw_final_return(monkeypatch):
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    # Inject a barebones definition that cannot trigger any continue
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{
+        "items": [{
+            "titleEN": "Simple Field",
+            "registers": ["003B"],
+            "ratio": 1.0,
+            "offset": 0.0,
+            "signed": True,
+            "parserRule": 1  # numeric
+        }]
+    }])
+
+    raw = [10]  # 0x003B maps to index 0
+    result = parser.parse_raw(raw)
+
+    # Assert not only correctness, but ensure parsing happened
+    assert isinstance(result, dict)
+    assert result == {"Simple Field": 10.0}
