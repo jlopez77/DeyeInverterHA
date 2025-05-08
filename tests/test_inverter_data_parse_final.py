@@ -37,13 +37,18 @@ def test_parser_rule_6_alert(monkeypatch):
 
 
 def test_enum_mapping_unknown_value(monkeypatch):
-    monkeypatch.setitem(parser._ENUM_MAPPINGS, (0x00AA, "EnumField"), {1: "Valid"})
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    # Register 0x003B maps to index 0
+    monkeypatch.setitem(parser._ENUM_MAPPINGS, (0x003B, "EnumField"), {1: "OK"})
+
     monkeypatch.setattr(parser, "_DEFINITIONS", [{
         "items": [{
             "titleEN": "EnumField",
-            "registers": ["00AA"]
+            "registers": ["003B"]
         }]
     }])
+    # Feed value 999 which is not in the mapping
     result = parser.parse_raw([999])
     assert result["EnumField"] == "Unknown (999)"
 
