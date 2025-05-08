@@ -286,3 +286,23 @@ def test_parse_raw_index_but_block_empty(monkeypatch):
     # Raw too short for idx=248, so block will be empty
     result = parse_raw([0] * 100)
     assert "Missing Block" not in result
+
+def test_parse_raw_block_empty_and_ascii_fallback(monkeypatch):
+    fake_defs = [{
+        "section": "ASCII Block",
+        "items": [{
+            "titleEN": "ASCII Fallback",
+            "registers": ["0x00F8"],  # Index 248
+            "parserRule": 5
+        }]
+    }]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+
+    # Case 1: raw too short, will skip at line 128
+    result = parse_raw([0] * 100)
+    assert "ASCII Fallback" not in result
+
+    # Case 2: block present but only control characters, triggers fallback to hex at line 139
+    raw = [0x0000] * 249
+    result = parse_raw(raw)
+    assert result["ASCII Fallback"].startswith("0x")
