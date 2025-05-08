@@ -354,3 +354,36 @@ def test_parse_raw_reversed_field(monkeypatch):
     result = parse_raw([0x0001, 0x0002])
     assert "Total Energy Bought" in result
     assert result["Total Energy Bought"] == 131073.0  # 0x00020001
+
+def test_enum_mapping_register_parse_error(monkeypatch):
+    # Triggers line 48
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", [{
+        "section": "BadEnum",
+        "items": [{
+            "titleEN": "Bad Enum",
+            "interactionType": 2,
+            "optionRanges": [{"key": 1, "valueEN": "Test"}],
+            "registers": ["0xZZZZ"]  # Will trigger ValueError
+        }]
+    }])
+    # Re-import the file so the mapping is rebuilt
+    import importlib
+    import custom_components.deye_inverter.InverterDataParser as parser
+    importlib.reload(parser)
+    assert (0xZZZZ, "Bad Enum") not in parser._ENUM_MAPPINGS  # Should not crash
+
+
+def test_ascii_control_char_output(monkeypatch):
+    # Triggers line 139 (ASCII fallback)
+    fake_defs = [{
+        "section": "ControlASCII",
+        "items": [{
+            "titleEN": "Serial",
+            "registers": ["0x003B"],
+            "parserRule": 5,
+        }]
+    }]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    raw = [0x0001]  # contains control characters
+    result = parse_raw(raw)
+    assert result["Serial"].startswith("0x")  # fallback format used
