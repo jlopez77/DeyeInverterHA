@@ -66,8 +66,8 @@ async def test_async_setup_import_creates_flow():
     hass = MagicMock()
     hass.config_entries.flow.async_init = AsyncMock()
 
-    # Run coroutines immediately on the event loop
-    hass.async_create_task = lambda coro: asyncio.create_task(coro)
+    tasks = []
+    hass.async_create_task = lambda coro: tasks.append(coro) or coro
 
     config = {
         DOMAIN: {
@@ -79,6 +79,9 @@ async def test_async_setup_import_creates_flow():
     }
 
     result = await async_setup(hass, config)
+
+    # Now actually run the scheduled coroutine
+    await tasks[0]
 
     assert result is True
     hass.config_entries.flow.async_init.assert_awaited_once_with(
