@@ -156,21 +156,19 @@ def test_parse_raw_returns_valid_field(monkeypatch):
 def test_parse_raw_reaches_return(monkeypatch):
     from custom_components.deye_inverter import InverterDataParser as parser
 
-    # Definition with no special handling
+    # Patch a definition with a non-special field
     monkeypatch.setattr(parser, "_DEFINITIONS", [{
         "items": [{
             "titleEN": "Generic Field",
-            "registers": ["003B"],
+            "registers": ["003B"],  # index 0
             "ratio": 1,
             "offset": 0,
-            "signed": True,
-            # No parserRule, no special title
+            "signed": True
         }]
     }])
 
-    raw = [42]  # Will be parsed as-is
+    raw = [123]
     result = parser.parse_raw(raw)
-    assert result == {"Generic Field": 42.0}
-    raw = [123]  # 0x003B maps to index 0
-    result = parser.parse_raw(raw)
-    assert result["Active Power"] == 123.0
+
+    # This will hit the default numeric parse path and reach return
+    assert result == {"Generic Field": 123.0}
