@@ -140,6 +140,13 @@ def test_load_definitions_triggers_path_fallback(monkeypatch):
     result = parser._load_definitions()
     assert "section" in result
 
+def test_load_definitions_success_json(monkeypatch):
+    valid_json = json.dumps({"section": {"items": []}})
+    monkeypatch.setattr("importlib.resources.read_text", lambda *a, **k: valid_json)
+    from custom_components.deye_inverter.InverterDataParser import _load_definitions
+    result = _load_definitions()
+    assert result == {"section": {"items": []}}
+    
 def test_enum_mapping_skips_item_without_title(monkeypatch):
     from custom_components.deye_inverter import InverterDataParser as parser
 
