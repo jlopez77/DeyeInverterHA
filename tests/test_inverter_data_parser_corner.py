@@ -5,7 +5,8 @@ from custom_components.deye_inverter.InverterDataParser import (
     _load_definitions,
     parse_raw,
     combine_registers,
-    _ENUM_MAPPINGS
+    _ENUM_MAPPINGS,
+    _DEFINITIONS
 )
 
 def test_load_definitions_json_error():
@@ -246,3 +247,27 @@ def test_parse_raw_exception(monkeypatch, caplog):
         except Exception:
             pass  # We only care that the exception was logged
         assert "Error parsing Error Field" in caplog.text
+
+def test_parse_raw_definitions_not_dict_or_list(monkeypatch):
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", "invalid_type")
+    result = parse_raw([1])
+    assert result == {}  # Should return empty dict when _DEFINITIONS is neither dict nor list
+
+def test_parse_raw_missing_registers(monkeypatch):
+    fake_defs = [{"section": "Broken", "items": [{"titleEN": "No Regs"}]}]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw([1])
+    assert "No Regs" not in result  # Should skip item with no registers
+
+def test_parse_raw_out_of_bounds(monkeypatch):
+    fake_defs = [{
+        "section": "Edge",
+        "items": [{
+            "titleEN": "Out of Bounds",
+            "registers": ["0x00F1"],  # Too far, will result in out of bounds
+            "parserRule": 1
+        }]
+    }]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw([1])
+    assert "Out of Bounds" not in result 
