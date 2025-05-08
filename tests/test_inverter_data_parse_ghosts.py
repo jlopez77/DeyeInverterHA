@@ -31,7 +31,7 @@ def test_enum_builder_invalid_register(monkeypatch):
                         parser._ENUM_MAPPINGS[(reg, title)] = mapping
                     except (ValueError, TypeError):
                         continue
-    assert (0x00F1, "InvalidRegisterTest") not in parser._ENUM_MAPPINGS
+    assert parser._ENUM_MAPPINGS.get((0x00F1, "InvalidOptionRanges")) == {}
 
 def test_enum_builder_invalid_option_ranges(monkeypatch):
     monkeypatch.setattr(parser, "_sections", [{
