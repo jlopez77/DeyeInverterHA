@@ -153,3 +153,14 @@ def test_parse_raw_returns_valid_field(monkeypatch):
     assert result["Simple"] == 42.0
 
 
+def test_return_result_hit(monkeypatch):
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{
+        "items": [{
+            "titleEN": "Voltage",
+            "registers": ["003B"],
+            "ratio": 1.0,
+            "offset": 0
+        }]
+    }])
+    result = parser.parse_raw([42])
+    assert result["Voltage"] == 42.0
