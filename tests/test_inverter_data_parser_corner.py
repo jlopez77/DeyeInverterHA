@@ -386,3 +386,38 @@ def test_ascii_control_char_output(monkeypatch):
     raw = [0x0001]  # contains control characters
     result = parse_raw(raw)
     assert result["Serial"].startswith("0x")  # fallback format used
+
+def test_parse_enum_fallback(monkeypatch):
+    """Test fallback when enum value is not in the defined optionRanges."""
+    fake_def = [
+        {
+            "section": "Fake",
+            "items": [
+                {
+                    "titleEN": "Enum Test",
+                    "registers": ["0x0097"],
+                    "interactionType": 2,
+                    "parserRule": 1,
+                    "optionRanges": [
+                        {"key": 1, "valueEN": "Enabled"},
+                        {"key": 2, "valueEN": "Disabled"},
+                    ],
+                }
+            ],
+        }
+    ]
+
+    monkeypatch.setattr(
+        "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_def
+    )
+
+    # Force rebuild of _ENUM_MAPPINGS
+    import importlib
+    import custom_components.deye_inverter.InverterDataParser as parser
+    importlib.reload(parser)
+
+    offset = (0x0070 - 0x003B + 1) + (0x0097 - 0x0096)
+    raw = [0] * offset + [999]
+
+    result = parser.parse_raw(raw)
+    assert result["Enum Test"] == "Unknown (999)"
