@@ -138,16 +138,16 @@ def parse_raw(raw: List[int]) -> Dict[str, Any]:
             if not title:
                 continue
 
-            ratio = float(item.get("ratio", 1))
-            offset = float(item.get("offset", 0))
-            signed = bool(item.get("signed", True))
-            parser_rule = item.get("parserRule")
-            registers = item.get("registers", [])
-
-            if not registers:
-                continue
-
             try:
+                ratio = float(item.get("ratio", 1))
+                offset = float(item.get("offset", 0))
+                signed = bool(item.get("signed", True))
+                parser_rule = item.get("parserRule")
+                registers = item.get("registers", [])
+
+                if not registers:
+                    continue
+
                 indices = []
                 for reg_hex in registers:
                     reg = int(reg_hex, 16)
