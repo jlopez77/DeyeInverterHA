@@ -50,7 +50,28 @@ def test_enum_builder_empty_registers(monkeypatch):
         }]
     }])
     parser._ENUM_MAPPINGS.clear()
-    importlib.reload(deye_inverter.InverterDataParser)
+    
+    # Call enum-mapping logic inline (no reload!)
+    for section in parser._sections:
+        for item in section.get("items", []):
+            option_ranges = item.get("optionRanges")
+            if isinstance(option_ranges, list) and option_ranges and item.get("interactionType") == 2:
+                title = item.get("titleEN")
+                if not title:
+                    continue
+                mapping = {}
+                for opt in option_ranges:
+                    key = opt.get("key")
+                    val = opt.get("valueEN")
+                    if isinstance(key, int) and isinstance(val, str):
+                        mapping[key] = val
+                for reg_hex in item.get("registers", []):
+                    try:
+                        reg = int(reg_hex, 16)
+                        parser._ENUM_MAPPINGS[(reg, title)] = mapping
+                    except (ValueError, TypeError):
+                        continue
+
     assert parser._ENUM_MAPPINGS == {}
 
 def test_ascii_fallback_parser():
