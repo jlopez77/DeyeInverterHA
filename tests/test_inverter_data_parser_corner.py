@@ -5,16 +5,15 @@ from custom_components.deye_inverter.InverterDataParser import (
     _load_definitions,
     parse_raw,
     combine_registers,
-    _ENUM_MAPPINGS,
-    _DEFINITIONS,
+    _ENUM_MAPPINGS
 )
 
 
 def test_load_definitions_json_error():
-    bad_json = "{bad: json"  # Invalid JSON
+    bad_json = "{bad: json"
     with patch("importlib.resources.read_text", return_value=bad_json):
         result = _load_definitions()
-        assert result == {}  # Should fallback to empty dict
+        assert result == {}
 
 
 def test_load_definitions_fallback_file():
@@ -86,7 +85,6 @@ def test_parse_raw_gen_connected_status(monkeypatch):
 
 
 def test_parse_raw_enum_mapping(monkeypatch):
-    """Test parsing with enum mapping fallback."""
     fake_defs = [
         {
             "section": "Test",
@@ -108,36 +106,18 @@ def test_parse_raw_enum_mapping(monkeypatch):
 
     # Rebuild _ENUM_MAPPINGS
     _ENUM_MAPPINGS.clear()
-    for section in fake_defs:
-        for item in section.get("items", []):
-            option_ranges = item.get("optionRanges")
-            if (
-                isinstance(option_ranges, list)
-                and option_ranges
-                and item.get("interactionType") == 2
-            ):
-                title = item.get("titleEN")
-                if not title:
-                    continue
-                mapping = {
-                    opt["key"]: opt["valueEN"]
-                    for opt in option_ranges
-                    if "key" in opt and "valueEN" in opt
-                }
-                for reg_hex in item.get("registers", []):
-                    try:
-                        reg = int(reg_hex, 16)
-                        _ENUM_MAPPINGS[(reg, title)] = mapping
-                    except (ValueError, TypeError):
-                        continue
+    for item in fake_defs[0]["items"]:
+        reg = int(item["registers"][0], 16)
+        title = item["titleEN"]
+        mapping = {opt["key"]: opt["valueEN"] for opt in item["optionRanges"]}
+        _ENUM_MAPPINGS[(reg, title)] = mapping
 
     raw = [0] * (0x00F1 - 0x003B) + [2]
     result = parse_raw(raw)
-    assert result["Mode Status"].startswith("Manual")
+    assert result["Mode Status"] == "Manual (2)"
 
 
 def test_parse_raw_enum_unknown(monkeypatch):
-    """Test fallback when enum value is unknown."""
     fake_defs = [
         {
             "section": "Test",
@@ -158,28 +138,11 @@ def test_parse_raw_enum_unknown(monkeypatch):
 
     # Rebuild _ENUM_MAPPINGS
     _ENUM_MAPPINGS.clear()
-    for section in fake_defs:
-        for item in section.get("items", []):
-            option_ranges = item.get("optionRanges")
-            if (
-                isinstance(option_ranges, list)
-                and option_ranges
-                and item.get("interactionType") == 2
-            ):
-                title = item.get("titleEN")
-                if not title:
-                    continue
-                mapping = {
-                    opt["key"]: opt["valueEN"]
-                    for opt in option_ranges
-                    if "key" in opt and "valueEN" in opt
-                }
-                for reg_hex in item.get("registers", []):
-                    try:
-                        reg = int(reg_hex, 16)
-                        _ENUM_MAPPINGS[(reg, title)] = mapping
-                    except (ValueError, TypeError):
-                        continue
+    for item in fake_defs[0]["items"]:
+        reg = int(item["registers"][0], 16)
+        title = item["titleEN"]
+        mapping = {opt["key"]: opt["valueEN"] for opt in item["optionRanges"]}
+        _ENUM_MAPPINGS[(reg, title)] = mapping
 
     raw = [0] * (0x00F1 - 0x003B) + [999]
     result = parse_raw(raw)
