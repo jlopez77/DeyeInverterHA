@@ -2,12 +2,25 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import UpdateFailed
+from tests.common import MockConfigEntry
 
 from custom_components.deye_inverter.coordinator import DeyeDataUpdateCoordinator
 
 @pytest.fixture
 def mock_hass():
     return MagicMock(spec=HomeAssistant)
+
+@pytest.fixture
+def mock_config_entry():
+    return MockConfigEntry(
+        domain="deye_inverter",
+        data={
+            "host": "192.168.1.100",
+            "port": 502,
+            "serial": "ABC123",
+            "installed_power": 5000,
+        }
+    )
 
 @pytest.fixture
 def mock_inverter_data():
@@ -20,15 +33,13 @@ def mock_inverter_data():
 
 @patch("custom_components.deye_inverter.coordinator.InverterData")
 @pytest.mark.asyncio
-async def test_update_success(mock_inverter_class, mock_hass, mock_inverter_data):
+async def test_update_success(mock_inverter_class, mock_hass, mock_config_entry, mock_inverter_data):
     """Test successful data update."""
     mock_inverter_class.return_value = mock_inverter_data
 
     coordinator = DeyeDataUpdateCoordinator(
         hass=mock_hass,
-        host="192.168.1.100",
-        port=502,
-        serial="ABC123",
+        config_entry=mock_config_entry,
         installed_power=5000,
     )
 
@@ -38,7 +49,7 @@ async def test_update_success(mock_inverter_class, mock_hass, mock_inverter_data
 
 @patch("custom_components.deye_inverter.coordinator.InverterData")
 @pytest.mark.asyncio
-async def test_update_failure(mock_inverter_class, mock_hass):
+async def test_update_failure(mock_inverter_class, mock_hass, mock_config_entry):
     """Test failed data update raises UpdateFailed."""
     mock_inverter = AsyncMock()
     mock_inverter.fetch_data.side_effect = Exception("connection error")
@@ -46,12 +57,9 @@ async def test_update_failure(mock_inverter_class, mock_hass):
 
     coordinator = DeyeDataUpdateCoordinator(
         hass=mock_hass,
-        host="192.168.1.100",
-        port=502,
-        serial="ABC123",
+        config_entry=mock_config_entry,
         installed_power=5000,
     )
 
     with pytest.raises(UpdateFailed):
         await coordinator._async_update_data()
-
