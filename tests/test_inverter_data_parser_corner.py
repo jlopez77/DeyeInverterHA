@@ -131,9 +131,11 @@ def test_parse_enum_fallback(monkeypatch):
     result = parser.parse_raw(raw)
     assert result["Enum Test"] == "Unknown (999)"
 
-@patch("custom_components.deye_inverter.InverterDataParser.pkg_resources.read_text", side_effect=Exception("pkg fail"))
-@patch("custom_components.deye_inverter.InverterDataParser.Path.read_text", return_value='{"section": {"items": []}}')
-def test_load_definitions_path_fallback_success(mock_path_read, mock_pkg_read):
-    from custom_components.deye_inverter.InverterDataParser import _load_definitions
-    result = _load_definitions()
+def test_load_definitions_triggers_path_fallback(monkeypatch):
+    from custom_components.deye_inverter import InverterDataParser as parser
+
+    monkeypatch.setattr(parser.pkg_resources, "read_text", lambda *a, **k: (_ for _ in ()).throw(Exception("pkg fail")))
+    monkeypatch.setattr(parser.Path, "read_text", lambda *a, **k: '{"section": {"items": []}}')
+
+    result = parser._load_definitions()
     assert "section" in result
