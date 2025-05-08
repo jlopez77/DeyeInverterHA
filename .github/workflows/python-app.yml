@@ -40,4 +40,4 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest --cov=custom_components/deye_inverter --cov-report=term-missing
+          pytest --cov=custom_components/deye_inverter --cov-report=term-missing --cov-report=xml
