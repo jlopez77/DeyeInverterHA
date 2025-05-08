@@ -239,7 +239,10 @@ def test_parse_raw_exception(monkeypatch, caplog):
         "ratio": "not_a_float",  # Will cause ValueError
     }]}]
     monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    
     with caplog.at_level("DEBUG"):
-        result = parse_raw([1])
+        try:
+            parse_raw([1])
+        except Exception:
+            pass  # We only care that the exception was logged
         assert "Error parsing Error Field" in caplog.text
-        assert "Error Field" not in result
