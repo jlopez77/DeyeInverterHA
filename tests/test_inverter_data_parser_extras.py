@@ -2,32 +2,34 @@ import pytest
 from custom_components.deye_inverter.InverterDataParser import parse_raw
 
 def test_parse_enum_fallback(monkeypatch):
+    """Test that unknown enum values return 'Unknown (...)'."""
     fake_def = [
         {
             "section": "Fake",
             "items": [
                 {
-                    "titleEN": "Battery Status",
-                    "registers": ["0x00BE"],
+                    "titleEN": "Enum Test",
+                    "registers": ["0x00F1"],
                     "interactionType": 2,
                     "parserRule": 1,
                     "optionRanges": [
-                        {"key": 1, "valueEN": "Stand-by"},
-                        {"key": 2, "valueEN": "Discharge"},
+                        {"key": 1, "valueEN": "Enabled"},
+                        {"key": 2, "valueEN": "Disabled"},
                     ],
                 }
             ],
         }
     ]
-    # Value 999 should not match any known enum
-    raw = [0] * 94 + [999]
+    # Simulate raw[0x00F1 - 0x003B] = 999
+    raw = [0] * (0x00F1 - 0x003B) + [999]
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_def
     )
     result = parse_raw(raw)
-    assert result["Battery Status"] == "Unknown (999)"
+    assert result["Enum Test"] == "Unknown (999)"
 
 def test_parse_reverse_and_ratio(monkeypatch):
+    """Test that reversed fields are parsed correctly."""
     fake_def = [
         {
             "section": "Grid",
@@ -41,17 +43,17 @@ def test_parse_reverse_and_ratio(monkeypatch):
             ],
         }
     ]
-    # Reversed means raw = [low, high], but we reverse before combine
-    # So combined value = 0x12345678 → 305419896 * 0.1 = 30541989.6
-    raw = [0] * (0x003F - 0x003B) + [0x5678, 0x1234]
+    raw = [0] * (0x003F - 0x003B) + [0x5678, 0x1234]  # reversed = 0x12345678 = 305419896
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_def
     )
     result = parse_raw(raw)
     assert "Total Grid Production" in result
     assert "raw" in result["Total Grid Production"]
+    assert result["Total Grid Production"].startswith("30541989")
 
 def test_parse_temperature_offset(monkeypatch):
+    """Test temperature field is offset by -100."""
     fake_def = [
         {
             "section": "Battery",
@@ -65,8 +67,7 @@ def test_parse_temperature_offset(monkeypatch):
             ],
         }
     ]
-    # Index 0x00B6 - 0x0096 = 32 → offset in raw = 54 + 32 = 86
-    raw = [0] * 86 + [500]  # 500 * 0.1 - 100 = -50.0
+    raw = [0] * (0x00B6 - 0x0096 + (0x0096 - 0x003B)) + [500]  # 500 * 0.1 - 100 = -50
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_def
     )
@@ -74,13 +75,14 @@ def test_parse_temperature_offset(monkeypatch):
     assert result["Battery Temperature"] == -50.0
 
 def test_parse_exception_handling(monkeypatch):
+    """Test that invalid register format is gracefully skipped."""
     fake_def = [
         {
             "section": "Faulty",
             "items": [
                 {
                     "titleEN": "Broken Field",
-                    "registers": ["0xZZZZ"],  # invalid hex
+                    "registers": ["0xZZZZ"],  # Invalid hex
                     "parserRule": 1,
                 }
             ],
@@ -90,4 +92,4 @@ def test_parse_exception_handling(monkeypatch):
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_def
     )
     result = parse_raw([0] * 100)
-    assert "Broken Field" not in result  # Safely skipped
+    assert "Broken Field" not in result
