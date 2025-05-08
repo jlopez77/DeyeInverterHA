@@ -175,3 +175,71 @@ def test_parse_raw_custom_parser_raises(monkeypatch):
     monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser.combine_registers", lambda *_: (_ for _ in ()).throw(Exception("fail")))
     result = parse_raw([0x0001])
     assert "Bad Field" not in result
+
+def test_load_definitions_fallback_file_missing(monkeypatch, caplog):
+    monkeypatch.setattr("importlib.resources.read_text", lambda *a, **k: (_ for _ in ()).throw(Exception("fail")))
+    monkeypatch.setattr("pathlib.Path.read_text", lambda *a, **k: (_ for _ in ()).throw(Exception("no file")))
+    from custom_components.deye_inverter.InverterDataParser import _load_definitions
+    with caplog.at_level("ERROR"):
+        result = _load_definitions()
+        assert result == {}
+        assert "Could not read DYRealTime.txt" in caplog.text
+
+
+def test_parse_raw_invalid_definitions_type(monkeypatch, caplog):
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", 1234)
+    from custom_components.deye_inverter.InverterDataParser import parse_raw
+    with caplog.at_level("ERROR"):
+        result = parse_raw([0])
+        assert result == {}
+        assert "Invalid definitions type" in caplog.text
+
+
+def test_parse_raw_empty_registers(monkeypatch):
+    fake_defs = [{"section": "X", "items": [{"titleEN": "Empty Regs", "registers": []}]}]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw([1, 2, 3])
+    assert "Empty Regs" not in result
+
+
+def test_parse_raw_empty_block(monkeypatch):
+    fake_defs = [{"section": "X", "items": [{"titleEN": "Bad Index", "registers": ["0xFFFF"]}]}]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw([0] * 10)
+    assert "Bad Index" not in result
+
+
+def test_parse_raw_parser_rule_6(monkeypatch):
+    fake_defs = [{"section": "Alerts", "items": [{
+        "titleEN": "Alert Flags",
+        "registers": ["0x003B"],
+        "parserRule": 6,
+    }]}]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw([123])
+    assert result["Alert Flags"] == 123
+
+
+def test_parse_raw_temperature_adjustment(monkeypatch):
+    fake_defs = [{"section": "Temp", "items": [{
+        "titleEN": "Ambient Temperature",
+        "registers": ["0x003B"],
+        "ratio": 1,
+        "signed": True,
+    }]}]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw([150])
+    assert result["Ambient Temperature"] == 50.0  # 150 * 1 - 100
+
+
+def test_parse_raw_exception(monkeypatch, caplog):
+    fake_defs = [{"section": "Oops", "items": [{
+        "titleEN": "Error Field",
+        "registers": ["0x003B"],
+        "ratio": "not_a_float",  # Will cause ValueError
+    }]}]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    with caplog.at_level("DEBUG"):
+        result = parse_raw([1])
+        assert "Error parsing Error Field" in caplog.text
+        assert "Error Field" not in result
