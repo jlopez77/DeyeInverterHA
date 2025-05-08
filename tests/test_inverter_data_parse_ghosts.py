@@ -8,8 +8,9 @@ import pytest
 from custom_components.deye_inverter import InverterDataParser as parser
 
 def reload_parser():
-    # Force re‐import so that _DEFINITIONS and _sections are rebuilt
+    # Force re-import so that _DEFINITIONS and _sections are rebuilt
     importlib.reload(parser)
+
 
 def test_load_definitions_file_not_found(monkeypatch, caplog):
     """Cover the fp.read_text exception path (lines ~48)."""
@@ -22,7 +23,8 @@ def test_load_definitions_file_not_found(monkeypatch, caplog):
     reload_parser()
     # _DEFINITIONS should fall back to {}
     assert parser._DEFINITIONS == {}
-    assert "Could not read DYraw.txt" in caplog.text
+    assert "Could not read DYRealTime.txt" in caplog.text
+
 
 def test_load_definitions_json_decode_error(monkeypatch, caplog):
     """Cover the JSONDecodeError branch (lines ~61–62)."""
@@ -31,7 +33,8 @@ def test_load_definitions_json_decode_error(monkeypatch, caplog):
     caplog.set_level(logging.ERROR)
     reload_parser()
     assert parser._DEFINITIONS == {}
-    assert "Error parsing DYraw.txt" in caplog.text
+    assert "Error parsing DYRealTime.txt" in caplog.text
+
 
 @pytest.fixture(autouse=True)
 def fresh_sections(monkeypatch):
@@ -39,11 +42,13 @@ def fresh_sections(monkeypatch):
     parser._sections = []
     return parser
 
+
 def make_section(item):
-    return {"rawResponse": [item]}
+    return {"RealTimeResponse": [item]}
+
 
 def test_enum_branch(monkeypatch, fresh_sections):
-    """Cover the enum‐mapping branch."""
+    """Cover the enum-mapping branch."""
     # define an enum mapping on idx=0
     item = {
         "Name": "Foo.Status",
@@ -52,13 +57,12 @@ def test_enum_branch(monkeypatch, fresh_sections):
         "EnumType": [{"Value": 1, "Text": "OK"}]
     }
     fresh_sections._sections = [make_section(item)]
-    # build the global mapping
+    # build the enum mapping manually and invoke parse_raw
     parser._ENUM_MAPPINGS.clear()
-    # re-run the enum‐mapping builder
-    importlib.reload(parser)
-    # now parse_raw should map 1 → "OK"
+    parser._ENUM_MAPPINGS[(0, "Status")] = {1: "OK"}
     result = parser.parse_raw([1])
     assert result["Status"] == "OK"
+
 
 def test_hex_branch(fresh_sections):
     """Cover display_format == 'Hex' (line ~128)."""
@@ -73,6 +77,7 @@ def test_hex_branch(fresh_sections):
     out = parser.parse_raw([255])
     assert out["Code"] == hex(255)
 
+
 def test_raw_branch(fresh_sections):
     """Cover display_format == 'Raw' (line ~132)."""
     fresh_sections._sections = [
@@ -85,6 +90,7 @@ def test_raw_branch(fresh_sections):
     ]
     out = parser.parse_raw([42])
     assert out["RawVal"] == 42
+
 
 def test_custom_display_format(fresh_sections):
     """Cover arbitrary DisplayFormat template (line ~139)."""
@@ -99,6 +105,7 @@ def test_custom_display_format(fresh_sections):
     out = parser.parse_raw([99])
     assert out["TempStr"] == "Value=99!"
 
+
 def test_time_branch(fresh_sections):
     """Cover Time formatting branch (line ~161)."""
     fresh_sections._sections = [
@@ -108,9 +115,9 @@ def test_time_branch(fresh_sections):
             "Title": "RunTime"
         })
     ]
-    # raw_data 930 → 09:30
     out = parser.parse_raw([930])
     assert out["RunTime"] == "09:30"
+
 
 def test_percent_unit_branch(fresh_sections):
     """Cover percentage formatting (unit '%' branch)."""
@@ -123,9 +130,9 @@ def test_percent_unit_branch(fresh_sections):
         })
     ]
     out = parser.parse_raw([50])
-    # ratio default =1, offset=0 → "50.0% (raw: 50)"
     assert out["Load"].startswith("50.0%")
     assert "(raw: 50)" in out["Load"]
+
 
 def test_default_numeric_branch(fresh_sections):
     """Cover the final default numeric branch."""
