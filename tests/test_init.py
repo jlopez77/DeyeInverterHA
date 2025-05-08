@@ -24,12 +24,11 @@ async def test_async_setup_entry():
 
     hass = MagicMock()
     hass.data = {}
+    hass.config_entries.async_forward_entry_setups = AsyncMock()
 
     with patch(
         "custom_components.deye_inverter.coordinator.DeyeDataUpdateCoordinator"
-    ) as mock_coordinator_class, patch(
-        "custom_components.deye_inverter.__init__.async_forward_entry_setups", new=AsyncMock()
-    ) as mock_forward:
+    ) as mock_coordinator_class:
         mock_coordinator = AsyncMock()
         mock_coordinator.async_config_entry_first_refresh = AsyncMock()
         mock_coordinator_class.return_value = mock_coordinator
@@ -40,7 +39,7 @@ async def test_async_setup_entry():
         assert DOMAIN in hass.data
         assert "test_entry" in hass.data[DOMAIN]
         mock_coordinator.async_config_entry_first_refresh.assert_awaited_once()
-        mock_forward.assert_awaited_once()
+        hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(mock_entry, ["sensor"])
 
 
 @pytest.mark.asyncio
@@ -59,7 +58,7 @@ async def test_async_unload_entry():
 
     assert result is True
     assert entry_id not in hass.data[DOMAIN]
-    hass.config_entries.async_unload_platforms.assert_awaited_once()
+    hass.config_entries.async_unload_platforms.assert_awaited_once_with(mock_entry, ["sensor"])
 
 
 @pytest.mark.asyncio
@@ -67,7 +66,7 @@ async def test_async_setup_import_creates_flow():
     """Test YAML import triggers config flow init."""
     hass = MagicMock()
     hass.config_entries.flow.async_init = AsyncMock()
-    hass.async_create_task = lambda coro: asyncio.create_task(coro)
+    hass.async_create_task = lambda coro: coro  # Just return the coroutine
 
     config = {
         DOMAIN: {
