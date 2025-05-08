@@ -72,4 +72,4 @@ async def test_fetch_data_logs_error_and_raises(caplog):
         with pytest.raises(ModbusException):
             await inverter.fetch_data()
 
-    assert "Error leyendo registros: Test failure" in caplog.text
+    assert "Error reading registers: Test failure" in caplog.text
