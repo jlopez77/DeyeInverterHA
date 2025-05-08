@@ -8,6 +8,6 @@
   ],
   "dependencies": [],
   "config_flow": true,
-  "single_config_entry": true,
+  "single_config_entry": false,
   "codeowners": ["@jlopez77"]
 }
