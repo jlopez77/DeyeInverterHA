@@ -7,6 +7,7 @@ import pytest
 
 from custom_components.deye_inverter import InverterDataParser as parser
 
+
 def reload_parser():
     # Force re-import so that _DEFINITIONS and _sections are rebuilt
     importlib.reload(parser)
@@ -37,8 +38,8 @@ def test_load_definitions_json_decode_error(monkeypatch, caplog):
 
 
 @pytest.fixture(autouse=True)
-def fresh_sections(monkeypatch):
-    """Reset _sections for each test so we can control it."""
+def fresh_sections():
+    """Reset parser._sections for each test so we can control it."""
     parser._sections = []
     return parser
 
@@ -47,9 +48,8 @@ def make_section(item):
     return {"RealTimeResponse": [item]}
 
 
-def test_enum_branch(monkeypatch, fresh_sections):
+def test_enum_branch(fresh_sections):
     """Cover the enum-mapping branch."""
-    # define an enum mapping on idx=0
     item = {
         "Name": "Foo.Status",
         "Index": 0,
@@ -57,10 +57,9 @@ def test_enum_branch(monkeypatch, fresh_sections):
         "EnumType": [{"Value": 1, "Text": "OK"}]
     }
     fresh_sections._sections = [make_section(item)]
-    # build the enum mapping manually and invoke parse_raw
-    parser._ENUM_MAPPINGS.clear()
-    parser._ENUM_MAPPINGS[(0, "Status")] = {1: "OK"}
-    result = parser.parse_raw([1])
+    fresh_sections._ENUM_MAPPINGS.clear()
+    fresh_sections._ENUM_MAPPINGS[(0, "Status")] = {1: "OK"}
+    result = fresh_sections.parse_realtime([1])
     assert result["Status"] == "OK"
 
 
@@ -74,7 +73,7 @@ def test_hex_branch(fresh_sections):
             "DisplayFormat": "Hex"
         })
     ]
-    out = parser.parse_raw([255])
+    out = fresh_sections.parse_realtime([255])
     assert out["Code"] == hex(255)
 
 
@@ -88,7 +87,7 @@ def test_raw_branch(fresh_sections):
             "DisplayFormat": "Raw"
         })
     ]
-    out = parser.parse_raw([42])
+    out = fresh_sections.parse_realtime([42])
     assert out["RawVal"] == 42
 
 
@@ -102,7 +101,7 @@ def test_custom_display_format(fresh_sections):
             "DisplayFormat": "Value={value}!"
         })
     ]
-    out = parser.parse_raw([99])
+    out = fresh_sections.parse_realtime([99])
     assert out["TempStr"] == "Value=99!"
 
 
@@ -115,7 +114,7 @@ def test_time_branch(fresh_sections):
             "Title": "RunTime"
         })
     ]
-    out = parser.parse_raw([930])
+    out = fresh_sections.parse_realtime([930])
     assert out["RunTime"] == "09:30"
 
 
@@ -129,7 +128,7 @@ def test_percent_unit_branch(fresh_sections):
             "Unit": "%"
         })
     ]
-    out = parser.parse_raw([50])
+    out = fresh_sections.parse_realtime([50])
     assert out["Load"].startswith("50.0%")
     assert "(raw: 50)" in out["Load"]
 
@@ -143,6 +142,6 @@ def test_default_numeric_branch(fresh_sections):
             "Title": "Value"
         })
     ]
-    out = parser.parse_raw([123])
+    out = fresh_sections.parse_realtime([123])
     assert isinstance(out["Value"], float)
     assert out["Value"] == 123.0
