@@ -52,3 +52,44 @@ def test_device_info(mock_coordinator):
     assert info["manufacturer"] == "Deye"
     assert info["name"] == "Deye Inverter ABC123"
     assert info["model"] == "Hybrid Inverter"
+
+def test_native_value_fallback():
+    """Ensure native_value returns 0.0 on bad data."""
+    coordinator = MagicMock()
+    coordinator.data = {
+        "PV1 Power": "bad",
+        "PV2 Power": None,
+    }
+    coordinator.serial = "TEST_FAIL"
+    sensor = DeyeInverterSensor(coordinator)
+
+    assert sensor.native_value == 0.0
+
+def test_extra_state_attribute_skips(monkeypatch):
+    """Ensure items with no title or missing data are skipped in extra_state_attributes."""
+    fake_defs = [
+        {
+            "section": "Fake",
+            "items": [
+                {"titleEN": None},                # Should be skipped
+                {"titleEN": "NotFound"},         # Value is None → skip
+                {"titleEN": "Battery Power"},    # Will be included
+            ],
+        }
+    ]
+    monkeypatch.setattr(
+        "custom_components.deye_inverter.sensor._DEFINITIONS", fake_defs
+    )
+
+    coordinator = MagicMock()
+    coordinator.data = {
+        "Battery Power": 500,
+        "NotFound": None,
+    }
+    coordinator.serial = "ABC123"
+
+    sensor = DeyeInverterSensor(coordinator)
+    attrs = sensor.extra_state_attributes
+
+    assert "Battery Power" in attrs
+    assert "NotFound" not in attrs
