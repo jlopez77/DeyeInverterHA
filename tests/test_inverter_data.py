@@ -102,3 +102,25 @@ async def test_fetch_data_without_hass_or_entry():
 
     result = await inverter.fetch_data()
     assert isinstance(result, dict)
+
+@pytest.mark.asyncio
+async def test_fetch_data_success_no_reload_trigger():
+    """Ensure fetch_data does NOT trigger reload when no exception occurs."""
+    hass = MagicMock()
+    hass.services.async_call = AsyncMock()
+    config_entry = MagicMock()
+    config_entry.entry_id = "test_entry"
+
+    inverter = InverterData(
+        host="localhost",
+        port=8899,
+        serial="1",
+        hass=hass,
+        config_entry=config_entry,
+    )
+    inverter._modbus.read_holding_registers = MagicMock(return_value=[0] * 100)
+
+    result = await inverter.fetch_data()
+
+    assert isinstance(result, dict)
+    hass.services.async_call.assert_not_called()
