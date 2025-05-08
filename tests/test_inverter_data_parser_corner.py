@@ -86,3 +86,90 @@ def test_parse_raw_gen_connected_status(monkeypatch):
     raw = [0] * offset + [0]  # Value 0 = "Off"
     result = parse_raw(raw)
     assert result["Gen-connected Status"] == "Off"
+
+def test_parse_raw_enum_mapping(monkeypatch):
+    """Test parsing with enum mapping fallback."""
+    fake_defs = [
+        {
+            "section": "Test",
+            "items": [
+                {
+                    "titleEN": "Mode Status",
+                    "registers": ["0x00F1"],
+                    "interactionType": 2,
+                    "parserRule": 1,
+                    "optionRanges": [
+                        {"key": 1, "valueEN": "Auto"},
+                        {"key": 2, "valueEN": "Manual"},
+                    ],
+                }
+            ],
+        }
+    ]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    raw = [0] * (0x00F1 - 0x003B) + [2]
+    result = parse_raw(raw)
+    assert result["Mode Status"].startswith("Manual")
+
+def test_parse_raw_enum_unknown(monkeypatch):
+    """Test fallback when enum value is unknown."""
+    fake_defs = [
+        {
+            "section": "Test",
+            "items": [
+                {
+                    "titleEN": "Mode Status",
+                    "registers": ["0x00F1"],
+                    "interactionType": 2,
+                    "parserRule": 1,
+                    "optionRanges": [
+                        {"key": 1, "valueEN": "Auto"},
+                    ],
+                }
+            ],
+        }
+    ]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    raw = [0] * (0x00F1 - 0x003B) + [999]
+    result = parse_raw(raw)
+    assert result["Mode Status"] == "Unknown (999)"
+
+def test_parse_raw_alert_bitfield(monkeypatch):
+    """Test alert bitfield parsing (parserRule == 6)."""
+    fake_defs = [
+        {
+            "section": "Alerts",
+            "items": [
+                {
+                    "titleEN": "Alert",
+                    "registers": ["0x004F"],
+                    "parserRule": 6,
+                }
+            ],
+        }
+    ]
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    raw = [0] * (0x004F - 0x003B) + [0x00FF]
+    result = parse_raw(raw)
+    assert result["Alert"] == 255
+
+def test_parse_raw_temperature_offset(monkeypatch):
+    """Test temperature with ratio and -100 correction."""
+    fake_defs = [
+        {
+            "section": "Battery",
+            "items": [
+                {
+                    "titleEN": "Battery Temperature",
+                    "registers": ["0x00B6"],
+                    "parserRule": 1,
+                    "ratio": 0.1,
+                }
+            ],
+        }
+    ]
+    offset = (0x0070 - 0x003B + 1) + (0x00B6 - 0x0096)
+    raw = [0] * offset + [500]  # 500 * 0.1 - 100 = -50
+    monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
+    result = parse_raw(raw)
+    assert result["Battery Temperature"] == -50.0
