@@ -1,18 +1,25 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from custom_components.deye_inverter.InverterData import InverterData
+
+# Patch PySolarmanV5 to avoid real socket usage in test environment
+@pytest.fixture(autouse=True)
+def patch_pysolarmanv5():
+    with patch("custom_components.deye_inverter.InverterData.PySolarmanV5") as mock_class:
+        mock_instance = MagicMock()
+        mock_instance.read_holding_registers.side_effect = RuntimeError("Mock failure")
+        mock_class.return_value = mock_instance
+        yield
 
 @pytest.mark.asyncio
 async def test_trigger_reload_after_max_errors():
     """Test that integration reload is triggered after max consecutive read errors."""
-    # Setup mocked hass and config_entry
     hass = MagicMock()
     hass.services.async_call = AsyncMock()
 
     config_entry = MagicMock()
     config_entry.entry_id = "test_entry"
 
-    # Instantiate InverterData with mocks
     inverter = InverterData(
         host="localhost",
         port=8899,
@@ -21,15 +28,11 @@ async def test_trigger_reload_after_max_errors():
         config_entry=config_entry,
     )
 
-    # Simulate read_holding_registers always failing
-    inverter._modbus.read_holding_registers = MagicMock(side_effect=RuntimeError("Mock failure"))
-
-    # Attempt 5 reads to exceed the max error threshold (which is 5)
-    for i in range(5):
+    # Attempt 5 reads to exceed the max error threshold
+    for _ in range(5):
         with pytest.raises(Exception):
             await inverter.fetch_data()
 
-    # Check that reload was triggered
     hass.services.async_call.assert_called_once_with(
         "homeassistant",
         "reload_config_entry",
@@ -53,10 +56,7 @@ async def test_no_reload_before_threshold():
         config_entry=config_entry,
     )
 
-    inverter._modbus.read_holding_registers = MagicMock(side_effect=RuntimeError("Mock failure"))
-
-    # Only 3 failures (below the threshold)
-    for i in range(3):
+    for _ in range(3):  # fewer than max_errors
         with pytest.raises(Exception):
             await inverter.fetch_data()
 
