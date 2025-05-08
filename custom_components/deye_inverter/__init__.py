@@ -1,4 +1,4 @@
-"""Inicialización de la integración Deye Inverter."""
+"""Initialization of the Deye Inverter integration."""
 
 import logging
 
@@ -12,11 +12,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Configura la integración desde YAML (import)."""
+    """Set up the integration via YAML (import)."""
     conf = config.get(DOMAIN)
     if not conf:
         return True
-    _LOGGER.debug("Importando configuración de YAML: %s", conf)
+    _LOGGER.debug("Importing YAML configuration: %s", conf)
     hass.async_create_task(
         hass.config_entries.flow.async_init(
             DOMAIN,
@@ -33,27 +33,28 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Configura la integración desde la config entry."""
+    """Set up the integration from a config entry."""
     from .coordinator import DeyeDataUpdateCoordinator
 
-    host = entry.data[CONF_HOST]
-    port = entry.data[CONF_PORT]
-    serial = entry.data[CONF_SERIAL]
     installed_power = entry.data[CONF_INSTALLED_POWER]
 
-    coordinator = DeyeDataUpdateCoordinator(hass, host, port, serial, installed_power)
+    coordinator = DeyeDataUpdateCoordinator(
+        hass=hass,
+        config_entry=entry,
+        installed_power=installed_power,
+    )
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    # Forwardea la configuración a la plataforma de sensores
+    # Forward the configuration to the sensor platform
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Descarga la config entry y sus plataformas."""
+    """Unload a config entry and its platforms."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)

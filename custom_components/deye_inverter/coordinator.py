@@ -3,6 +3,7 @@ from datetime import timedelta
 from typing import Any, Dict
 
 from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
@@ -20,12 +21,20 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
     def __init__(
         self,
         hass: HomeAssistant,
-        host: str,
-        port: int,
-        serial: str,
+        config_entry: ConfigEntry,
         installed_power: float,
     ) -> None:
-        self.inverter = InverterData(host, port, serial)
+        host = config_entry.data["host"]
+        port = config_entry.data.get("port", 8899)
+        serial = config_entry.data["serial"]
+
+        self.inverter = InverterData(
+            host=host,
+            port=port,
+            serial=serial,
+            hass=hass,
+            config_entry=config_entry,
+        )
         self.serial = serial
         self.installed_power = installed_power
         self._last_known_data: Dict[str, Any] = {}

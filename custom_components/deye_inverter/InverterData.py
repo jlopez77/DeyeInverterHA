@@ -13,14 +13,19 @@ _LOGGER = logging.getLogger(__name__)
 
 class InverterData:
     """
-    Envía peticiones Modbus RTU sobre TCP al inversor usando PySolarmanV5,
-    que internamente gestiona framing, unit id y checksum.
+    Sends Modbus RTU over TCP requests to the inverter using PySolarmanV5,
+    which handles framing, unit id, and checksum internally.
     """
 
-    def __init__(self, host: str, port: int = 8899, serial: str = "1"):
+    def __init__(self, host: str, port: int = 8899, serial: str = "1", hass=None, config_entry=None):
         self._host = host
         self._port = port
         self._serial = int(serial)
+        self._hass = hass
+        self._config_entry = config_entry
+        self._error_count = 0
+        self._max_errors = 5
+
         self._modbus = PySolarmanV5(
             self._host,
             self._serial,
@@ -33,7 +38,7 @@ class InverterData:
         )
 
     async def fetch_data(self) -> Dict[str, Any]:
-        """Lee dos bloques de registros y retorna el dict parseado."""
+        """Reads two register blocks and returns the parsed dictionary."""
         loop = asyncio.get_running_loop()
         first_addr = 0x003B
         first_len = 0x0070 - first_addr + 1
@@ -48,17 +53,31 @@ class InverterData:
         try:
             regs1 = await loop.run_in_executor(None, read_block, first_addr, first_len)
             await asyncio.sleep(0.1)
-            regs2 = await loop.run_in_executor(
-                None, read_block, second_addr, second_len
-            )
+            regs2 = await loop.run_in_executor(None, read_block, second_addr, second_len)
+            self._error_count = 0  # Reset on success
         except Exception as e:
-            _LOGGER.error("Error leyendo registros: %s", e)
+            _LOGGER.error("Error reading registers: %s", e)
+            self._error_count += 1
+            if self._error_count >= self._max_errors:
+                _LOGGER.error("Max consecutive read errors reached (%d). Reloading integration.", self._max_errors)
+                await self._trigger_reload()
             raise ModbusException(e)
 
-        _LOGGER.debug("Regs bloque1 (%s, %s): %s", first_addr, first_len, regs1)
-        _LOGGER.debug("Regs bloque2 (%s, %s): %s", second_addr, second_len, regs2)
+        _LOGGER.debug("Regs block1 (%s, %s): %s", first_addr, first_len, regs1)
+        _LOGGER.debug("Regs block2 (%s, %s): %s", second_addr, second_len, regs2)
 
         raw = regs1 + regs2
         _LOGGER.debug("RAW registers (total %d): %s", len(raw), raw)
 
         return parse_raw(raw)
+
+    async def _trigger_reload(self):
+        if not self._hass or not self._config_entry:
+            _LOGGER.error("Cannot reload integration: 'hass' or 'config_entry' is missing.")
+            return
+        await self._hass.services.async_call(
+            "homeassistant",
+            "reload_config_entry",
+            {"entry_id": self._config_entry.entry_id},
+            blocking=False,
+        )
