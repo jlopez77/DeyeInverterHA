@@ -139,9 +139,7 @@ def test_parse_raw_enum_unknown(monkeypatch):
 
 def test_parse_enum_fallback(monkeypatch):
     """Ensure unknown enum values return 'Unknown (...)' instead of numeric fallback."""
-    import importlib
-    import custom_components.deye_inverter.InverterDataParser as parser
-    importlib.reload(parser)
+    from custom_components.deye_inverter import InverterDataParser as parser
 
     fake_defs = [
         {
@@ -161,10 +159,8 @@ def test_parse_enum_fallback(monkeypatch):
         }
     ]
 
-    # 🔁 Monkeypatch AFTER reload
     monkeypatch.setattr(parser, "_DEFINITIONS", fake_defs)
 
-    # 🧠 Manually rebuild enum mappings
     parser._ENUM_MAPPINGS.clear()
     parser._ENUM_MAPPINGS[(0x0097, "Enum Test")] = {1: "Enabled", 2: "Disabled"}
 
