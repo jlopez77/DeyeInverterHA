@@ -2,6 +2,8 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Quality: Silver](https://img.shields.io/badge/Quality-Silver-silver)
+![Tests](https://github.com/jlopez77/DeyeInverterHA/actions/workflows/test.yml/badge.svg)
+![Coverage](https://codecov.io/gh/jlopez77/DeyeInverterHA/branch/main/graph/badge.svg)
 
 ## Overview
 
