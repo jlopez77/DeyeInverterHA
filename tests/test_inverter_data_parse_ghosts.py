@@ -39,8 +39,9 @@ def test_load_definitions_json_decode_error(monkeypatch, caplog):
 
 @pytest.fixture(autouse=True)
 def fresh_sections():
-    """Reset parser._sections for each test so we can control it."""
+    """Reset parser._sections and mappings for each test."""
     parser._sections = []
+    parser._ENUM_MAPPINGS.clear()
     return parser
 
 
@@ -57,9 +58,9 @@ def test_enum_branch(fresh_sections):
         "EnumType": [{"Value": 1, "Text": "OK"}]
     }
     fresh_sections._sections = [make_section(item)]
-    fresh_sections._ENUM_MAPPINGS.clear()
+    # manually insert mapping
     fresh_sections._ENUM_MAPPINGS[(0, "Status")] = {1: "OK"}
-    result = fresh_sections.parse_realtime([1])
+    result = fresh_sections.parse_raw([1])
     assert result["Status"] == "OK"
 
 
@@ -73,7 +74,7 @@ def test_hex_branch(fresh_sections):
             "DisplayFormat": "Hex"
         })
     ]
-    out = fresh_sections.parse_realtime([255])
+    out = fresh_sections.parse_raw([255])
     assert out["Code"] == hex(255)
 
 
@@ -87,7 +88,7 @@ def test_raw_branch(fresh_sections):
             "DisplayFormat": "Raw"
         })
     ]
-    out = fresh_sections.parse_realtime([42])
+    out = fresh_sections.parse_raw([42])
     assert out["RawVal"] == 42
 
 
@@ -101,7 +102,7 @@ def test_custom_display_format(fresh_sections):
             "DisplayFormat": "Value={value}!"
         })
     ]
-    out = fresh_sections.parse_realtime([99])
+    out = fresh_sections.parse_raw([99])
     assert out["TempStr"] == "Value=99!"
 
 
@@ -114,7 +115,7 @@ def test_time_branch(fresh_sections):
             "Title": "RunTime"
         })
     ]
-    out = fresh_sections.parse_realtime([930])
+    out = fresh_sections.parse_raw([930])
     assert out["RunTime"] == "09:30"
 
 
@@ -128,7 +129,7 @@ def test_percent_unit_branch(fresh_sections):
             "Unit": "%"
         })
     ]
-    out = fresh_sections.parse_realtime([50])
+    out = fresh_sections.parse_raw([50])
     assert out["Load"].startswith("50.0%")
     assert "(raw: 50)" in out["Load"]
 
@@ -142,6 +143,10 @@ def test_default_numeric_branch(fresh_sections):
             "Title": "Value"
         })
     ]
-    out = fresh_sections.parse_realtime([123])
+    out = fresh_sections.parse_raw([123])
     assert isinstance(out["Value"], float)
     assert out["Value"] == 123.0
+
+
+# Backwards compatibility alias
+parse_realtime = parse_raw
