@@ -60,13 +60,14 @@ async def test_async_unload_entry():
     assert entry_id not in hass.data[DOMAIN]
     hass.config_entries.async_unload_platforms.assert_awaited_once_with(mock_entry, ["sensor"])
 
-
 @pytest.mark.asyncio
 async def test_async_setup_import_creates_flow():
     """Test YAML import triggers config flow init."""
     hass = MagicMock()
     hass.config_entries.flow.async_init = AsyncMock()
-    hass.async_create_task = lambda coro: coro  # Just return the coroutine
+
+    # Run coroutines immediately on the event loop
+    hass.async_create_task = lambda coro: asyncio.create_task(coro)
 
     config = {
         DOMAIN: {
