@@ -1,82 +1,141 @@
-import pytest
+import json
 import importlib
-from custom_components import deye_inverter
+import logging
+from pathlib import Path
+
+import pytest
+
 from custom_components.deye_inverter import InverterDataParser as parser
 
-def test_enum_builder_empty_title(monkeypatch):
-    monkeypatch.setattr(parser, "_sections", [{
-        "items": [{
-            "interactionType": 2,
-            "optionRanges": [{"key": 1, "valueEN": "Text"}],
-            "registers": ["0x00F1"],
-            "titleEN": ""  # Triggers early continue
-        }]
-    }])
+def reload_parser():
+    # Force re‐import so that _DEFINITIONS and _sections are rebuilt
+    importlib.reload(parser)
+
+def test_load_definitions_file_not_found(monkeypatch, caplog):
+    """Cover the fp.read_text exception path (lines ~48)."""
+    # make pkg_resources.read_text throw, and Path.read_text also throw
+    monkeypatch.setattr(parser.pkg_resources, "read_text",
+                        lambda pkg, name: (_ for _ in ()).throw(Exception("oops")))
+    monkeypatch.setattr(Path, "read_text",
+                        lambda self: (_ for _ in ()).throw(IOError("no file")))
+    caplog.set_level(logging.ERROR)
+    reload_parser()
+    # _DEFINITIONS should fall back to {}
+    assert parser._DEFINITIONS == {}
+    assert "Could not read DYRealTime.txt" in caplog.text
+
+def test_load_definitions_json_decode_error(monkeypatch, caplog):
+    """Cover the JSONDecodeError branch (lines ~61–62)."""
+    # have read_text return invalid JSON
+    monkeypatch.setattr(parser.pkg_resources, "read_text", lambda pkg, name: "not valid json")
+    caplog.set_level(logging.ERROR)
+    reload_parser()
+    assert parser._DEFINITIONS == {}
+    assert "Error parsing DYRealTime.txt" in caplog.text
+
+@pytest.fixture(autouse=True)
+def fresh_sections(monkeypatch):
+    """Reset _sections for each test so we can control it."""
+    parser._sections = []
+    return parser
+
+def make_section(item):
+    return {"RealTimeResponse": [item]}
+
+def test_enum_branch(monkeypatch, fresh_sections):
+    """Cover the enum‐mapping branch."""
+    # define an enum mapping on idx=0
+    item = {
+        "Name": "Foo.Status",
+        "Index": 0,
+        "Title": "Status",
+        "EnumType": [{"Value": 1, "Text": "OK"}]
+    }
+    fresh_sections._sections = [make_section(item)]
+    # build the global mapping
     parser._ENUM_MAPPINGS.clear()
-    importlib.reload(deye_inverter.InverterDataParser)
-    assert (0x00F1, "") not in parser._ENUM_MAPPINGS
+    # re-run the enum‐mapping builder
+    importlib.reload(parser)
+    # now parse_realtime should map 1 → "OK"
+    result = parser.parse_realtime([1])
+    assert result["Status"] == "OK"
 
-def test_enum_builder_invalid_register_type(monkeypatch):
-    monkeypatch.setattr(parser, "_sections", [{
-        "items": [{
-            "interactionType": 2,
-            "optionRanges": [{"key": 1, "valueEN": "Text"}],
-            "registers": [None],  # Invalid type for register
-            "titleEN": "InvalidType"
-        }]
-    }])
-    parser._ENUM_MAPPINGS.clear()
-    importlib.reload(deye_inverter.InverterDataParser)
-    assert (None, "InvalidType") not in parser._ENUM_MAPPINGS
+def test_hex_branch(fresh_sections):
+    """Cover display_format == 'Hex' (line ~128)."""
+    fresh_sections._sections = [
+        make_section({
+            "Name": "Foo.Code",
+            "Index": 0,
+            "Title": "Code",
+            "DisplayFormat": "Hex"
+        })
+    ]
+    out = parser.parse_realtime([255])
+    assert out["Code"] == hex(255)
 
-def test_definitions_as_dict(monkeypatch):
-    monkeypatch.setattr(parser, "_load_definitions", lambda: {"section": {"items": []}})
-    importlib.reload(deye_inverter.InverterDataParser)
-    assert isinstance(parser._sections, list)
+def test_raw_branch(fresh_sections):
+    """Cover display_format == 'Raw' (line ~132)."""
+    fresh_sections._sections = [
+        make_section({
+            "Name": "Foo.RawVal",
+            "Index": 0,
+            "Title": "RawVal",
+            "DisplayFormat": "Raw"
+        })
+    ]
+    out = parser.parse_realtime([42])
+    assert out["RawVal"] == 42
 
-def test_definitions_invalid_type(monkeypatch):
-    monkeypatch.setattr(parser, "_load_definitions", lambda: 42)
-    importlib.reload(deye_inverter.InverterDataParser)
-    # Line 132-133 logs error and sets _sections = []
-    assert isinstance(parser._sections, list)
+def test_custom_display_format(fresh_sections):
+    """Cover arbitrary DisplayFormat template (line ~139)."""
+    fresh_sections._sections = [
+        make_section({
+            "Name": "Foo.TempStr",
+            "Index": 0,
+            "Title": "TempStr",
+            "DisplayFormat": "Value={value}!"
+        })
+    ]
+    out = parser.parse_realtime([99])
+    assert out["TempStr"] == "Value=99!"
 
-def test_enum_builder_empty_registers(monkeypatch):
-    monkeypatch.setattr(parser, "_sections", [{
-        "items": [{
-            "interactionType": 2,
-            "optionRanges": [{"key": 1, "valueEN": "Blank"}],
-            "registers": [],
-            "titleEN": "EmptyRegisters"
-        }]
-    }])
-    parser._ENUM_MAPPINGS.clear()
-    
-    # Call enum-mapping logic inline (no reload!)
-    for section in parser._sections:
-        for item in section.get("items", []):
-            option_ranges = item.get("optionRanges")
-            if isinstance(option_ranges, list) and option_ranges and item.get("interactionType") == 2:
-                title = item.get("titleEN")
-                if not title:
-                    continue
-                mapping = {}
-                for opt in option_ranges:
-                    key = opt.get("key")
-                    val = opt.get("valueEN")
-                    if isinstance(key, int) and isinstance(val, str):
-                        mapping[key] = val
-                for reg_hex in item.get("registers", []):
-                    try:
-                        reg = int(reg_hex, 16)
-                        parser._ENUM_MAPPINGS[(reg, title)] = mapping
-                    except (ValueError, TypeError):
-                        continue
+def test_time_branch(fresh_sections):
+    """Cover Time formatting branch (line ~161)."""
+    fresh_sections._sections = [
+        make_section({
+            "Name": "Foo.RunTime",
+            "Index": 0,
+            "Title": "RunTime"
+        })
+    ]
+    # raw_data 930 → 09:30
+    out = parser.parse_realtime([930])
+    assert out["RunTime"] == "09:30"
 
-    assert parser._ENUM_MAPPINGS == {}
+def test_percent_unit_branch(fresh_sections):
+    """Cover percentage formatting (unit '%' branch)."""
+    fresh_sections._sections = [
+        make_section({
+            "Name": "Foo.Load",
+            "Index": 0,
+            "Title": "Load",
+            "Unit": "%"
+        })
+    ]
+    out = parser.parse_realtime([50])
+    # ratio default =1, offset=0 → "50.0% (raw: 50)"
+    assert out["Load"].startswith("50.0%")
+    assert "(raw: 50)" in out["Load"]
 
-def test_ascii_fallback_parser():
-    chars = [0x00, 0x7F]  # not printable
-    ascii_string = "".join(chr(b) for b in chars)
-    value = "0x" + "".join(f"{b:02X}" for b in chars)
-    result = value or None
-    assert result == "0x007F"
+def test_default_numeric_branch(fresh_sections):
+    """Cover the final default numeric branch."""
+    fresh_sections._sections = [
+        make_section({
+            "Name": "Foo.Value",
+            "Index": 0,
+            "Title": "Value"
+        })
+    ]
+    out = parser.parse_realtime([123])
+    assert isinstance(out["Value"], float)
+    assert out["Value"] == 123.0
