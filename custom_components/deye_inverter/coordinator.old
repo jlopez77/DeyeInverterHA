@@ -6,8 +6,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from pysolarmanv5.pysolarmanv5 import NoSocketAvailableError  # <-- NUEVO
-
 from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
 from .InverterData import InverterData
 
@@ -26,23 +24,20 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         config_entry: ConfigEntry,
         installed_power: float,
     ) -> None:
-        self.hass = hass
-        self.config_entry = config_entry
-        self.installed_power = installed_power
-        self.serial = config_entry.data["serial"]
-        self._last_known_data: Dict[str, Any] = {}
-        self.inverter = None
+        host = config_entry.data["host"]
+        port = config_entry.data.get("port", 8899)
+        serial = config_entry.data["serial"]
 
-        try:
-            self.inverter = InverterData(
-                host=config_entry.data["host"],
-                port=config_entry.data.get("port", 8899),
-                serial=config_entry.data["serial"],
-                hass=hass,
-                config_entry=config_entry,
-            )
-        except NoSocketAvailableError as e:
-            _LOGGER.warning("Inverter not reachable during setup: %s", e)
+        self.inverter = InverterData(
+            host=host,
+            port=port,
+            serial=serial,
+            hass=hass,
+            config_entry=config_entry,
+        )
+        self.serial = serial
+        self.installed_power = installed_power
+        self._last_known_data: Dict[str, Any] = {}
 
         super().__init__(
             hass,
@@ -56,21 +51,6 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         Periodic call: fetch data and handle errors.
         Returns last known data on failure to avoid sensor 'unavailable'.
         """
-        if self.inverter is None:
-            try:
-                self.inverter = InverterData(
-                    host=self.config_entry.data["host"],
-                    port=self.config_entry.data.get("port", 8899),
-                    serial=self.config_entry.data["serial"],
-                    hass=self.hass,
-                    config_entry=self.config_entry,
-                )
-            except NoSocketAvailableError as e:
-                _LOGGER.warning("Inverter still unreachable: %s", e)
-                if self._last_known_data:
-                    return self._last_known_data
-                raise UpdateFailed(f"Inverter still unreachable: {e}")
-
         try:
             data = await self.inverter.fetch_data()
             self._last_known_data = data

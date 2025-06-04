@@ -3,7 +3,7 @@ import logging
 from typing import Any, Dict
 
 from pymodbus.exceptions import ModbusException
-from pysolarmanv5.pysolarmanv5 import PySolarmanV5, NoSocketAvailableError
+from pysolarmanv5.pysolarmanv5 import PySolarmanV5
 
 from .const import DEFAULT_MODBUS_TIMEOUT
 from .InverterDataParser import parse_raw
@@ -33,20 +33,16 @@ class InverterData:
         self._error_count = 0
         self._max_errors = 5
 
-        try:
-            self._modbus = PySolarmanV5(
-                self._host,
-                self._serial,
-                port=self._port,
-                mb_slave_id=1,
-                timeout=DEFAULT_MODBUS_TIMEOUT,
-                verbose=False,
-                auto_reconnect=True,
-                logger=_LOGGER,
-            )
-        except NoSocketAvailableError as e:
-            _LOGGER.warning("No socket available when connecting to inverter: %s", e)
-            raise
+        self._modbus = PySolarmanV5(
+            self._host,
+            self._serial,
+            port=self._port,
+            mb_slave_id=1,
+            timeout=DEFAULT_MODBUS_TIMEOUT,
+            verbose=False,
+            auto_reconnect=True,
+            logger=_LOGGER,
+        )
 
     async def fetch_data(self) -> Dict[str, Any]:
         """Reads two register blocks and returns the parsed dictionary."""
@@ -73,7 +69,8 @@ class InverterData:
             self._error_count += 1
             if self._error_count >= self._max_errors:
                 _LOGGER.error(
-                    "Max consecutive read errors reached (%d). Reloading integration.",
+                    "Max consecutive read errors reached (%d). \
+                               Reloading integration.",
                     self._max_errors,
                 )
                 await self._trigger_reload()
