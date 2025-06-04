@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from pysolarmanv5.pysolarmanv5 import NoSocketAvailableError  # <-- NUEVO
+from pysolarmanv5.pysolarmanv5 import NoSocketAvailableError
 
 from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
 from .InverterData import InverterData
@@ -26,6 +26,8 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         config_entry: ConfigEntry,
         installed_power: float,
     ) -> None:
+        assert config_entry is not None  # ✅ for mypy
+
         self.hass = hass
         self.config_entry = config_entry
         self.installed_power = installed_power
@@ -57,6 +59,8 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         Returns last known data on failure to avoid sensor 'unavailable'.
         """
         if self.inverter is None:
+            if self.config_entry is None:
+                raise UpdateFailed("No config entry available to create inverter.")
             try:
                 self.inverter = InverterData(
                     host=self.config_entry.data["host"],
