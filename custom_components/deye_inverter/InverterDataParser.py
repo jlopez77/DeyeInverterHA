@@ -214,9 +214,9 @@ def parse_raw(raw: List[int]) -> Dict[str, Any]:
                     result[title] = f"Unknown ({raw_int})"
                     continue
 
-                # Alert/bits
+                # Alert/bitfields: store as hex string to stay JSON-serializable
                 if parser_rule == 6:
-                    result[title] = raw_int
+                    result[title] = "0x" + "".join(f"{w:04X}" for w in block)
                     continue
 
                 if title in ["Total Grid Production"]:
