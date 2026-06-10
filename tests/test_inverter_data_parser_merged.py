@@ -75,7 +75,7 @@ def test_parser_rule_6(monkeypatch):
         }]
     }])
     result = parser.parse_raw([255])
-    assert result["Bitfield"] == 255
+    assert result["Bitfield"] == "0x00FF"
 
 
 def test_parse_exception_handling(monkeypatch, caplog):
@@ -199,7 +199,7 @@ def test_parse_raw_forces_return_path(monkeypatch):
     }])
 
     result = parser.parse_raw([99, 42])
-    assert result == {"First": 99, "Final": 42.0}
+    assert result == {"First": "0x0063", "Final": 42.0}
 
 def test_parse_raw_final_return(monkeypatch):
     from custom_components.deye_inverter import InverterDataParser as parser
@@ -444,7 +444,7 @@ def test_parse_raw_parser_rule_6(monkeypatch):
     }]}]
     monkeypatch.setattr("custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs)
     result = parse_raw([123])
-    assert result["Alert Flags"] == 123
+    assert result["Alert Flags"] == "0x007B"
 
 
 def test_parse_raw_temperature_adjustment(monkeypatch):
@@ -637,7 +637,7 @@ def test_parse_rule_6(monkeypatch):
         }]
     }])
     result = parser.parse_raw([255])
-    assert result["Bitfield"] == 255
+    assert result["Bitfield"] == "0x00FF"
 
 
 def test_parse_ascii_fallback(monkeypatch):
@@ -703,7 +703,7 @@ def test_parse_raw_final_return(monkeypatch):
         ]
     }])
     result = parser.parse_raw([99, 42])
-    assert result["Bitfield"] == 99
+    assert result["Bitfield"] == "0x0063"
     assert result["FinalField"] == 42.0
 
 def test_enum_mapping_skips_item_without_title(monkeypatch):
