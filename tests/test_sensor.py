@@ -159,6 +159,19 @@ def test_description_metadata_temperature():
     assert desc.device_class is SensorDeviceClass.TEMPERATURE
     assert desc.native_unit_of_measurement == "°C"
 
+def test_description_metadata_frequency():
+    for title in ("Grid Frequency", "Load Frequency"):
+        desc = _description(title)
+        assert desc.device_class is SensorDeviceClass.FREQUENCY
+        assert desc.state_class is SensorStateClass.MEASUREMENT
+        assert desc.native_unit_of_measurement == "Hz"
+
+def test_description_metadata_battery_energy():
+    for title in ("Total Battery Charge", "Total Battery Discharge"):
+        desc = _description(title)
+        assert desc.device_class is SensorDeviceClass.ENERGY
+        assert desc.state_class is SensorStateClass.TOTAL_INCREASING
+
 def test_description_metadata_battery_soc():
     desc = _description("Battery SOC")
     assert desc.device_class is SensorDeviceClass.BATTERY

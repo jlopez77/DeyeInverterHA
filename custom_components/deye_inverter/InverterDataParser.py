@@ -144,6 +144,8 @@ def parse_raw(raw: Sequence[Optional[int]]) -> Dict[str, Any]:
         "Total Energy Sold",
         "Total Energy Bought",
         "Total Grid Production",
+        "Total Battery Charge",
+        "Total Battery Discharge",
     }
 
     if isinstance(_DEFINITIONS, dict):

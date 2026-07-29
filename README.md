@@ -91,11 +91,14 @@ One sensor per metric, named after the metric (e.g. *PV1 Power*, *Battery SOC*, 
 Available metrics:
 
 - PV: PV1/PV2 Voltage, Current, Power; Daily/Total Production; Micro-inverter Power
-- Battery: Voltage, Current, Power, SOC, Temperature, Status
-- Grid: Grid Voltage L1/L2, Grid Status, Grid-connected Status, Total Grid Power, Total Grid Production, Daily/Total Energy Bought and Sold, Internal/External CT L1/L2 Power
-- Load: Load L1/L2 Power, Load Voltage, Total Load Power, Daily/Total Load Consumption, SmartLoad Enable Status
-- Inverter: Running Status, Total Power, Current L1/L2, Inverter L1/L2 Power, AC/DC Temperature, Gen Power, Gen-connected Status
+- Battery: Voltage, Current, Power, SOC, Temperature, Status, Daily/Total Charge and Discharge
+- Grid: Grid Voltage L1/L2, Grid Current L1/L2, Grid Frequency, Grid Status, Grid-connected Status, Total Grid Power, Total Grid Production, Daily/Total Energy Bought and Sold, Internal/External CT L1/L2 Power
+- Load: Load L1/L2 Power, Load Voltage, Load Frequency, Total Load Power, Daily/Total Load Consumption, SmartLoad Enable Status
+- Inverter: Running Status, Total Power, Current L1/L2, Inverter L1/L2 Power, AC/DC Temperature, Gen Power, Gen-connected Status, Inverter ID, Board versions, Work Mode
 - Alert (bitfield, hex string)
+
+The battery Daily/Total Charge and Discharge sensors can be used in the Energy
+dashboard's battery section.
 
 ## Troubleshooting
 

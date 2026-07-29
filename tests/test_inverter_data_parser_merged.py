@@ -128,6 +128,21 @@ def test_enum_mapping_unknown_value(monkeypatch):
     assert result["EnumField"] == "Unknown (999)"
 
 
+def test_total_battery_charge_reversed(monkeypatch):
+    """Battery totals use the reversed (lo, hi) word order."""
+    monkeypatch.setattr(parser, "_DEFINITIONS", [{
+        "items": [{
+            "titleEN": "Total Battery Charge",
+            "registers": ["0x003B", "0x003C"],
+            "parserRule": 3,
+            "ratio": 0.1
+        }]
+    }])
+    # lo=67, hi=0 -> 67 * 0.1 = 6.7 (matches live inverter reading)
+    result = parser.parse_raw([67, 0])
+    assert result["Total Battery Charge"] == pytest.approx(6.7)
+
+
 def test_total_grid_production(monkeypatch):
     monkeypatch.setattr(
         parser,

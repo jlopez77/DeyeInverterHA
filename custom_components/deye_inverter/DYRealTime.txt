@@ -171,6 +171,46 @@
         "inputRanges": [],
         "ratio": 0.1,
         "unit": "º"
+      },
+      {
+        "titleZH": "电池日充电量",
+        "titleEN": "Daily Battery Charge",
+        "registers": ["0x0046"],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 0.1,
+        "unit": "kwh"
+      },
+      {
+        "titleZH": "电池日放电量",
+        "titleEN": "Daily Battery Discharge",
+        "registers": ["0x0047"],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 0.1,
+        "unit": "kwh"
+      },
+      {
+        "titleZH": "电池总充电量",
+        "titleEN": "Total Battery Charge",
+        "registers": ["0x0048", "0x0049"],
+        "interactionType": 1,
+        "parserRule": 3,
+        "inputRanges": [],
+        "ratio": 0.1,
+        "unit": "kwh"
+      },
+      {
+        "titleZH": "电池总放电量",
+        "titleEN": "Total Battery Discharge",
+        "registers": ["0x004A", "0x004B"],
+        "interactionType": 1,
+        "parserRule": 3,
+        "inputRanges": [],
+        "ratio": 0.1,
+        "unit": "kwh"
       }
     ]
   },
@@ -322,6 +362,36 @@
         "inputRanges": [],
         "ratio": 0.1,
         "unit": "kwh"
+      },
+      {
+        "titleZH": "电网频率",
+        "titleEN": "Grid Frequency",
+        "registers": ["0x004F"],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 0.01,
+        "unit": "Hz"
+      },
+      {
+        "titleZH": "电网电流1",
+        "titleEN": "Grid Current L1",
+        "registers": ["0x00A0"],
+        "interactionType": 1,
+        "parserRule": 2,
+        "inputRanges": [],
+        "ratio": 0.01,
+        "unit": "A"
+      },
+      {
+        "titleZH": "电网电流2",
+        "titleEN": "Grid Current L2",
+        "registers": ["0x00A1"],
+        "interactionType": 1,
+        "parserRule": 2,
+        "inputRanges": [],
+        "ratio": 0.01,
+        "unit": "A"
       }
     ]
   },
@@ -367,6 +437,16 @@
         "inputRanges": [],
         "ratio": 0.1,
         "unit": "V"
+      },
+      {
+        "titleZH": "负载频率",
+        "titleEN": "Load Frequency",
+        "registers": ["0x00C0"],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 0.01,
+        "unit": "Hz"
       },
       {
         "titleZH": "今日负载耗电量",
