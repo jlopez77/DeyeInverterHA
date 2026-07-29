@@ -4,7 +4,7 @@ import logging
 
 from custom_components.deye_inverter.InverterData import InverterData
 from custom_components.deye_inverter.const import DOMAIN
-from custom_components.deye_inverter.InverterData import ModbusException
+from custom_components.deye_inverter.InverterData import ModbusReadError
 
 
 @pytest.fixture(autouse=True)
@@ -74,12 +74,12 @@ async def test_no_reload_before_threshold():
 
 @pytest.mark.asyncio
 async def test_fetch_data_logs_error_and_raises(caplog):
-    """Test that fetch_data logs the error and raises ModbusException."""
+    """Test that fetch_data logs the error and raises ModbusReadError."""
     inverter = InverterData(host="localhost", port=8899, serial="1")
     inverter._modbus.read_holding_registers = MagicMock(side_effect=RuntimeError("Test failure"))
 
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(ModbusException):
+        with pytest.raises(ModbusReadError):
             await inverter.fetch_data()
 
     assert "Error reading registers: Test failure" in caplog.text
