@@ -9,6 +9,7 @@ from custom_components.deye_inverter.entity_descriptions import build_descriptio
 from custom_components.deye_inverter.sensor import (
     DeyeInverterSensor,
     DeyeMetricSensor,
+    DeyeProductionPercentSensor,
 )
 
 
@@ -21,6 +22,7 @@ def mock_coordinator():
         "Battery Power": 100,
     }
     coordinator.serial = "ABC123"
+    coordinator.installed_power = 5
     coordinator.last_update_success = True
     return coordinator
 
@@ -74,6 +76,31 @@ def test_native_value_fallback():
     sensor = DeyeInverterSensor(coordinator)
 
     assert sensor.native_value == 0.0
+
+
+# === Production percent sensor ===
+
+def test_production_percent_value(mock_coordinator):
+    """PV1+PV2 relative to installed power in kW."""
+    sensor = DeyeProductionPercentSensor(mock_coordinator)
+
+    # (500 + 300) W of 5 kW installed -> 16.0 %
+    assert sensor.native_value == 16.0
+    assert sensor.native_unit_of_measurement == "%"
+    assert sensor.unique_id == "ABC123_production_percent"
+
+def test_production_percent_no_installed_power(mock_coordinator):
+    """Without a usable installed power the sensor reports None."""
+    mock_coordinator.installed_power = 0
+    assert DeyeProductionPercentSensor(mock_coordinator).native_value is None
+
+    mock_coordinator.installed_power = "bad"
+    assert DeyeProductionPercentSensor(mock_coordinator).native_value is None
+
+def test_production_percent_bad_data(mock_coordinator):
+    """Bad PV values report None instead of raising."""
+    mock_coordinator.data = {"PV1 Power": "bad"}
+    assert DeyeProductionPercentSensor(mock_coordinator).native_value is None
 
 
 # === Description builder ===

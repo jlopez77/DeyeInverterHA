@@ -18,6 +18,32 @@ class ModbusReadError(Exception):
     """Raised when reading registers from the inverter fails."""
 
 
+def test_connection(host: str, port: int, serial: str) -> None:
+    """Open a connection and read one register; raises on any failure.
+
+    Blocking: must run in an executor.
+    """
+    modbus = PySolarmanV5(
+        host,
+        int(serial),
+        port=port,
+        mb_slave_id=1,
+        timeout=DEFAULT_MODBUS_TIMEOUT,
+        verbose=False,
+        auto_reconnect=False,
+        logger=_LOGGER,
+    )
+    try:
+        modbus.read_holding_registers(
+            register_addr=CORE_REGISTER_BLOCKS[0][0], quantity=1
+        )
+    finally:
+        try:
+            modbus.disconnect()
+        except Exception:  # pragma: no cover - best-effort cleanup
+            pass
+
+
 class InverterData:
     """
     Sends Modbus RTU over TCP requests to the inverter using PySolarmanV5,

@@ -1,0 +1,23 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Conecta tu inversor Deye",
+        "description": "Introduce los datos de conexión del datalogger del inversor (Modbus TCP).",
+        "data": {
+          "host": "Host",
+          "port": "Puerto",
+          "serial": "Número de serie del datalogger",
+          "installed_power": "Potencia instalada (kW)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "No se pudo conectar con el inversor. Comprueba el host, el puerto y el número de serie, y asegúrate de que ningún otro cliente esté conectado al datalogger.",
+      "invalid_serial": "El número de serie solo puede contener dígitos."
+    },
+    "abort": {
+      "already_configured": "Este inversor ya está configurado."
+    }
+  }
+}

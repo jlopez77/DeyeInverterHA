@@ -59,7 +59,11 @@ You will be asked for:
 - Host: The IP address of your inverter
 - Port: Modbus TCP port (default: 8899)
 - Serial Number: The datalogger’s serial number (something like 17XXXXXX)
-- Installed Power (kW): For production % estimation
+- Installed Power (kW): Used for the *Production* (%) sensor
+
+The connection is tested before the entry is created — if the inverter is not
+reachable (wrong host/port/serial, or another client is holding the datalogger's
+single TCP slot) the form shows an error instead of creating a broken entry.
 
 ## Entities
 
@@ -67,6 +71,9 @@ All entities are grouped under one **Deye Inverter** device.
 
 ### Aggregate Sensor
 `sensor.deye_inverter` — total inverter PV production (PV1 + PV2), kept for backward compatibility.
+
+### Production Sensor
+*Production* — current PV output as a percentage of the installed power you configured (e.g. 800 W of 5 kW → 16 %).
 
 > **Breaking change:** this sensor no longer exposes the inverter metrics as
 > `extra_state_attributes`. Templates reading attributes from it must switch to
