@@ -100,6 +100,33 @@ Available metrics:
 The battery Daily/Total Charge and Discharge sensors can be used in the Energy
 dashboard's battery section.
 
+## Energy Dashboard
+
+The integration exposes everything Home Assistant's Energy dashboard needs for a
+hybrid PV + battery installation. Go to **Settings → Dashboards → Energy** and
+configure:
+
+| Energy dashboard section | Field | Sensor to select |
+|---|---|---|
+| **Electricity grid** | Grid consumption | `Total Energy Bought` |
+| **Electricity grid** | Return to grid | `Total Energy Sold` |
+| **Solar panels** | Solar production | `Total Production` |
+| **Home battery storage** | Energy going in to the battery | `Total Battery Charge` |
+| **Home battery storage** | Energy coming out of the battery | `Total Battery Discharge` |
+
+Notes:
+
+- Always pick the **Total** counters, not the Daily ones — Home Assistant
+  computes hourly/daily deltas from long-term statistics itself, and the
+  lifetime counters are the most robust source for that.
+- Entity names above are as shown in the picker; the entity ids follow the
+  pattern `sensor.deye_inverter_<serial>_total_energy_bought`, etc.
+- After configuring, the dashboard needs up to **an hour** to show the first
+  data: statistics are compiled every 5 minutes, but the energy panel
+  aggregates them per hour.
+- Optionally add your grid price in the *Grid consumption* entry to get cost
+  tracking.
+
 ## Troubleshooting
 
 🔌 No data / Sensor unavailable:
