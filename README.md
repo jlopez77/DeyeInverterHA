@@ -36,19 +36,17 @@ This integration is **not yet in HACS**. You can install it manually for now:
 ### Manual Steps
 
 1. Download or clone this repository:
+
    ```bash
    git clone https://github.com/jlopez77/DeyeInverterHA.git
+   ```
 
-2. Copy the folder:
+2. Copy the folder `custom_components/deye_inverter` into your Home Assistant config directory:
 
-   ```bash
-   custom_components/deyeinverter
+   ```
+   config/custom_components/deye_inverter
+   ```
 
-  into your Home Assistant config directory:
-
-   ```bash
-   config/custom_components/deyeinverter
-```
 3. Restart Home Assistant.
 
 4. In the UI, go to Settings > Devices & Services > Add Integration, search for Deye Inverter, and follow the setup steps.
@@ -102,7 +100,7 @@ Check if the serial number is correct
 
 ⚙️ Integration not showing up:
 
-Make sure files are correctly placed under config/custom_components/deyeinverter
+Make sure files are correctly placed under `config/custom_components/deye_inverter`
 
 Restart Home Assistant
 
