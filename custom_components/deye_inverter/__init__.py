@@ -7,6 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, CONF_HOST, CONF_PORT, CONF_SERIAL, CONF_INSTALLED_POWER
+from .coordinator import DeyeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,8 +35,6 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up the integration from a config entry."""
-    from .coordinator import DeyeDataUpdateCoordinator
-
     installed_power = entry.data[CONF_INSTALLED_POWER]
 
     coordinator = DeyeDataUpdateCoordinator(

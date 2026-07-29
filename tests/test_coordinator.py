@@ -15,7 +15,12 @@ class MockConfigEntry:
 
 @pytest.fixture
 def mock_hass():
-    return MagicMock(spec=HomeAssistant)
+    hass = MagicMock(spec=HomeAssistant)
+    # Run executor jobs inline so lazy inverter creation works in tests
+    hass.async_add_executor_job = AsyncMock(
+        side_effect=lambda func, *args: func(*args)
+    )
+    return hass
 
 
 @pytest.fixture
@@ -90,6 +95,48 @@ async def test_update_failure_with_cache(mock_inverter_class, mock_hass, mock_co
         installed_power=5000,
     )
 
+    coordinator._last_known_data = {"PV1 Power": 500}
+
+    result = await coordinator._async_update_data()
+    assert result == {"PV1 Power": 500}
+
+
+@patch("custom_components.deye_inverter.coordinator.InverterData")
+@pytest.mark.asyncio
+async def test_unreachable_inverter_no_cache(
+    mock_inverter_class, mock_hass, mock_config_entry
+):
+    """UpdateFailed is raised when the inverter cannot be created and no cache."""
+    from pysolarmanv5.pysolarmanv5 import NoSocketAvailableError
+
+    mock_inverter_class.side_effect = NoSocketAvailableError("No socket available")
+
+    coordinator = DeyeDataUpdateCoordinator(
+        hass=mock_hass,
+        config_entry=mock_config_entry,
+        installed_power=5000,
+    )
+
+    assert coordinator.inverter is None
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
+
+
+@patch("custom_components.deye_inverter.coordinator.InverterData")
+@pytest.mark.asyncio
+async def test_unreachable_inverter_with_cache(
+    mock_inverter_class, mock_hass, mock_config_entry
+):
+    """Last known data is returned when the inverter cannot be created."""
+    from pysolarmanv5.pysolarmanv5 import NoSocketAvailableError
+
+    mock_inverter_class.side_effect = NoSocketAvailableError("No socket available")
+
+    coordinator = DeyeDataUpdateCoordinator(
+        hass=mock_hass,
+        config_entry=mock_config_entry,
+        installed_power=5000,
+    )
     coordinator._last_known_data = {"PV1 Power": 500}
 
     result = await coordinator._async_update_data()

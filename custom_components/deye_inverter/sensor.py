@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Union
+from typing import Any, Optional
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -15,9 +15,23 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import DeyeDataUpdateCoordinator
-from .InverterDataParser import _DEFINITIONS
+from .entity_descriptions import DeyeSensorDescription, build_descriptions
 
 _LOGGER = logging.getLogger(__name__)
+
+ATTRIBUTION = "Data provided by Deye inverter via Modbus TCP"
+
+
+def _inverter_device_info(coordinator: DeyeDataUpdateCoordinator) -> DeviceInfo:
+    """Device info shared by all entities of one inverter."""
+    serial = getattr(coordinator, "serial", "unknown")
+    return DeviceInfo(
+        identifiers={(DOMAIN, serial)},
+        name=f"Deye Inverter {serial}",
+        manufacturer="Deye",
+        model="Hybrid Inverter",
+        sw_version="1.0.0",
+    )
 
 
 async def async_setup_entry(
@@ -25,11 +39,16 @@ async def async_setup_entry(
 ) -> None:
     """Set up the sensor platform."""
     coordinator: DeyeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([DeyeInverterSensor(coordinator)], update_before_add=False)
+    entities: list[SensorEntity] = [DeyeInverterSensor(coordinator)]
+    entities.extend(
+        DeyeMetricSensor(coordinator, description)
+        for description in build_descriptions()
+    )
+    async_add_entities(entities, update_before_add=False)
 
 
 class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEntity):
-    """Sensor that represents the total inverter power and all other values."""
+    """Legacy aggregate sensor: total PV power (PV1 + PV2)."""
 
     _attr_has_entity_name = True
 
@@ -45,14 +64,7 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
     @property
     def device_info(self) -> DeviceInfo:
         """Return device info for the Deye inverter."""
-        serial = getattr(self.coordinator, "serial", "unknown")
-        return DeviceInfo(
-            identifiers={(DOMAIN, serial)},
-            name=f"Deye Inverter {serial}",
-            manufacturer="Deye",
-            model="Hybrid Inverter",
-            sw_version="1.0.0",
-        )
+        return _inverter_device_info(self.coordinator)
 
     @property
     def native_value(self) -> float:
@@ -65,21 +77,42 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return all other inverter parameters as state attributes."""
-        data: dict[str, Any] = self.coordinator.data
-        attrs: dict[str, Any] = {}
-        sections: Union[List[Any], Any] = (
-            _DEFINITIONS.values() if isinstance(_DEFINITIONS, dict) else _DEFINITIONS
-        )
+        """Return the attribution only; metrics are dedicated entities now."""
+        return {"attribution": ATTRIBUTION}
 
-        for section in sections:
-            for item in section.get("items", []):
-                title = item.get("titleEN")
-                if not title:
-                    continue
-                value = data.get(title)
-                if value is not None:
-                    attrs[title] = value
 
-        attrs["attribution"] = "Data provided by Deye inverter via Modbus TCP"
-        return attrs
+class DeyeMetricSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEntity):
+    """One sensor per inverter metric defined in DYRealTime.txt."""
+
+    _attr_has_entity_name = True
+    entity_description: DeyeSensorDescription
+
+    def __init__(
+        self,
+        coordinator: DeyeDataUpdateCoordinator,
+        description: DeyeSensorDescription,
+    ) -> None:
+        """Initialize the metric sensor from its description."""
+        super().__init__(coordinator)
+        self.entity_description = description
+        serial = getattr(coordinator, "serial", "unknown")
+        self._attr_unique_id = f"{serial}_{description.key}"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device info for the Deye inverter."""
+        return _inverter_device_info(self.coordinator)
+
+    @property
+    def available(self) -> bool:
+        """Available only when the metric is present in the coordinator data."""
+        if not super().available:
+            return False
+        data = self.coordinator.data or {}
+        return self.entity_description.metric_title in data
+
+    @property
+    def native_value(self) -> Optional[Any]:
+        """Return the parsed value for this metric, or None if missing."""
+        data = self.coordinator.data or {}
+        return data.get(self.entity_description.metric_title)

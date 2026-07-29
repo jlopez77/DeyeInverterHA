@@ -31,26 +31,31 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         self.hass = hass
         self.config_entry = config_entry
         self.installed_power = installed_power
+        self._host = config_entry.data["host"]
+        self._port = config_entry.data.get("port", 8899)
         self.serial = config_entry.data["serial"]
         self._last_known_data: Dict[str, Any] = {}
-        self.inverter = None
-
-        try:
-            self.inverter = InverterData(
-                host=config_entry.data["host"],
-                port=config_entry.data.get("port", 8899),
-                serial=config_entry.data["serial"],
-                hass=hass,
-                config_entry=config_entry,
-            )
-        except NoSocketAvailableError as e:
-            _LOGGER.warning("Inverter not reachable during setup: %s", e)
+        # Created lazily in _async_update_data: the constructor opens a
+        # socket, which must not run in the event loop.
+        self.inverter: InverterData | None = None
 
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
+        )
+        # The base class may reset config_entry from context; keep ours.
+        self.config_entry = config_entry
+
+    def _create_inverter(self) -> InverterData:
+        """Create the InverterData client (blocking: opens a socket)."""
+        return InverterData(
+            host=self._host,
+            port=self._port,
+            serial=self.serial,
+            hass=self.hass,
+            config_entry=self.config_entry,
         )
 
     async def _async_update_data(self) -> Dict[str, Any]:
@@ -59,21 +64,15 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         Returns last known data on failure to avoid sensor 'unavailable'.
         """
         if self.inverter is None:
-            if self.config_entry is None:
-                raise UpdateFailed("No config entry available to create inverter.")
             try:
-                self.inverter = InverterData(
-                    host=self.config_entry.data["host"],
-                    port=self.config_entry.data.get("port", 8899),
-                    serial=self.config_entry.data["serial"],
-                    hass=self.hass,
-                    config_entry=self.config_entry,
+                self.inverter = await self.hass.async_add_executor_job(
+                    self._create_inverter
                 )
             except NoSocketAvailableError as e:
-                _LOGGER.warning("Inverter still unreachable: %s", e)
+                _LOGGER.warning("Inverter unreachable: %s", e)
                 if self._last_known_data:
                     return self._last_known_data
-                raise UpdateFailed(f"Inverter still unreachable: {e}")
+                raise UpdateFailed(f"Inverter unreachable: {e}")
 
         try:
             data = await self.inverter.fetch_data()

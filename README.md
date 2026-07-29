@@ -9,7 +9,7 @@
 
 This custom integration allows Home Assistant to read **real-time data** from **Deye hybrid inverters** over Modbus TCP, using a mapping file based on `DYRealTime.txt` and powered by [`PySolarmanV5`](https://github.com/jlopez77/pysolarmanv5) and `pymodbus`.
 
-It provides a single sensor entity — **`sensor.deye_inverter`** — with a wide set of inverter metrics exposed via `extra_state_attributes`.
+It creates **one sensor entity per inverter metric** (40+ entities), all grouped under a single inverter device, with proper device classes and state classes — so energy metrics work with the **Energy dashboard** and get long-term statistics.
 
 ---
 
@@ -18,7 +18,8 @@ It provides a single sensor entity — **`sensor.deye_inverter`** — with a wid
 - 📡 Real-time data from Deye hybrid inverters
 - 🧠 Based on `PySolarmanV5` and `pymodbus`
 - 🧩 UI-based configuration (no YAML needed)
-- 📊 Exposes 50+ inverter metrics as sensor attributes
+- 📊 One entity per metric (40+ sensors) with device/state classes and statistics
+- ⚡ Energy dashboard support (kWh sensors with `total_increasing`)
 - 💡 Works offline — no cloud dependency
 
 ---
@@ -63,68 +64,33 @@ You will be asked for:
 - Installed Power (kW): For production % estimation
 
 ## Entities
-### Main Sensor
-sensor.deye_inverter
-Represents total inverter PV production (PV1 + PV2). This sensor includes all inverter metrics as attributes.
 
-## Available Attributes
-### The sensor exposes all of the following as extra_state_attributes:
+All entities are grouped under one **Deye Inverter** device.
 
-- PV Metrics
-   - PV1 Voltage
-   - PV1 Current
-   - PV1 Power
-   - PV2 Voltage
-   - PV2 Current
-   - PV2 Power
-- Battery
-   - Battery Voltage
-   - Battery Current
-   - Battery Power
-   - Battery SOC
-   - Battery Temperature
-   - Battery Status
-- Grid
-   - Grid Voltage L1
-   - Grid Voltage L2
-   - Grid-connected Status
-   - Total Grid Power
-   - Total Grid Production
-   - Total Energy Bought
-   - Total Energy Sold
-   - Daily Energy Bought
-   - Daily Energy Sold
-- Load
-   - Load L1 Power
-   - Load L2 Power
-   - Load Voltage
-   - Total Load Power
-   - Total Load Consumption
-   - Daily Load Consumption
-- Temperature
-   - AC Temperature
-   - DC Temperature
-- Other Metrics
-   - Total Production
-   - Daily Production
-   - Total Power
-   - Time of use
-   - SmartLoad Enable Status
-   - Gen-connected Status
-   - Gen Power
-   - Running Status
-   - Alert
-   - Work Mode
-   - Inverter ID
-   - Inverter L1 Power
-   - Inverter L2 Power
-   - Communication Board Version No.
-   - Control Board Version No.
-   - Micro-inverter Power
-   - External CT L1 Power
-   - External CT L2 Power
-   - Internal CT L1 Power
-   - Internal CT L2 Power
+### Aggregate Sensor
+`sensor.deye_inverter` — total inverter PV production (PV1 + PV2), kept for backward compatibility.
+
+> **Breaking change:** this sensor no longer exposes the inverter metrics as
+> `extra_state_attributes`. Templates reading attributes from it must switch to
+> the dedicated per-metric sensors below. Status values are now plain strings
+> (e.g. `Discharge` instead of `Discharge (12)`) and Total Grid Production is
+> numeric.
+
+### Per-Metric Sensors
+One sensor per metric, named after the metric (e.g. *PV1 Power*, *Battery SOC*, *Total Grid Production*). Units, device classes, and state classes are derived automatically, so:
+
+- Power/voltage/current/temperature sensors record statistics (`measurement`)
+- Energy sensors (kWh) use `total_increasing` and can be used in the **Energy dashboard**
+- Status sensors (Battery Status, Grid Status, Running Status, Alert, …) are text sensors in the *Diagnostic* category
+
+Available metrics:
+
+- PV: PV1/PV2 Voltage, Current, Power; Daily/Total Production; Micro-inverter Power
+- Battery: Voltage, Current, Power, SOC, Temperature, Status
+- Grid: Grid Voltage L1/L2, Grid Status, Grid-connected Status, Total Grid Power, Total Grid Production, Daily/Total Energy Bought and Sold, Internal/External CT L1/L2 Power
+- Load: Load L1/L2 Power, Load Voltage, Total Load Power, Daily/Total Load Consumption, SmartLoad Enable Status
+- Inverter: Running Status, Total Power, Current L1/L2, Inverter L1/L2 Power, AC/DC Temperature, Gen Power, Gen-connected Status
+- Alert (bitfield, hex string)
 
 ## Troubleshooting
 
