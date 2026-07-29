@@ -190,10 +190,10 @@ def parse_raw(raw: List[int]) -> Dict[str, Any]:
                 # Custom logic overrides
                 reg_key = int(registers[0], 16)
                 if reg_key == 0x00BE and title == "Battery Status":
-                    result[title] = f"{parse_battery_status(raw_int)} ({raw_int})"
+                    result[title] = parse_battery_status(raw_int)
                     continue
                 if reg_key == 0x00A9 and title == "Grid Status":
-                    result[title] = f"{parse_grid_status(raw_int)} ({raw_int})"
+                    result[title] = parse_grid_status(raw_int)
                     continue
                 if reg_key == 0x00C3 and title == "SmartLoad Enable Status":
                     result[title] = f"{parse_smartload_status(raw_int)}"
@@ -208,7 +208,7 @@ def parse_raw(raw: List[int]) -> Dict[str, Any]:
                 # Enum mapping by (register, title)
                 mapping = _ENUM_MAPPINGS.get((reg_key, title))
                 if mapping and raw_int in mapping:
-                    result[title] = f"{mapping[raw_int]} ({raw_int})"
+                    result[title] = mapping[raw_int]
                     continue
                 elif mapping:
                     result[title] = f"Unknown ({raw_int})"
@@ -219,16 +219,12 @@ def parse_raw(raw: List[int]) -> Dict[str, Any]:
                     result[title] = "0x" + "".join(f"{w:04X}" for w in block)
                     continue
 
-                if title in ["Total Grid Production"]:
-                    val = raw_int * ratio + offset
-                    result[title] = f"{round(val, 2)} (raw: {raw_int})"
+                # Default: numeric
+                if "Temperature" in title:
+                    val = raw_int * ratio - 100 + offset
                 else:
-                    # Default: numeric
-                    if "Temperature" in title:
-                        val = raw_int * ratio - 100 + offset
-                    else:
-                        val = raw_int * ratio + offset
-                    result[title] = float(round(val, 2))
+                    val = raw_int * ratio + offset
+                result[title] = float(round(val, 2))
 
             except Exception as e:
                 _LOGGER.debug("Error parsing %s: %s", title, e)

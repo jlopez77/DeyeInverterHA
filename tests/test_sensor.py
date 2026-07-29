@@ -1,8 +1,15 @@
 import pytest
 from unittest.mock import MagicMock
 
-from custom_components.deye_inverter.sensor import DeyeInverterSensor
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from custom_components.deye_inverter.entity_descriptions import build_descriptions
+from custom_components.deye_inverter.sensor import (
+    DeyeInverterSensor,
+    DeyeMetricSensor,
+)
 
 
 @pytest.fixture
@@ -17,6 +24,15 @@ def mock_coordinator():
     coordinator.last_update_success = True
     return coordinator
 
+
+def _description(title):
+    matches = [d for d in build_descriptions() if d.metric_title == title]
+    assert matches, f"No description generated for {title!r}"
+    return matches[0]
+
+
+# === Aggregate sensor ===
+
 def test_sensor_properties(mock_coordinator):
     """Test core sensor properties like name, unique_id, native_value."""
     sensor = DeyeInverterSensor(mock_coordinator)
@@ -29,17 +45,11 @@ def test_sensor_properties(mock_coordinator):
     assert sensor.available is True
 
 def test_extra_state_attributes(mock_coordinator):
-    """Test that extra attributes are populated."""
-    mock_coordinator.data = {
-        "Battery Power": 100,
-        "attribution": "Data provided by Deye inverter via Modbus TCP"
-    }
+    """The aggregate sensor exposes only the attribution, no metrics."""
     sensor = DeyeInverterSensor(mock_coordinator)
     attrs = sensor.extra_state_attributes
 
-    assert isinstance(attrs, dict)
-    assert "Battery Power" in attrs
-    assert attrs["Battery Power"] == 100
+    assert attrs == {"attribution": "Data provided by Deye inverter via Modbus TCP"}
 
 def test_device_info(mock_coordinator):
     """Test that device_info is returned correctly."""
@@ -65,31 +75,88 @@ def test_native_value_fallback():
 
     assert sensor.native_value == 0.0
 
-def test_extra_state_attribute_skips(monkeypatch):
-    """Ensure items with no title or missing data are skipped in extra_state_attributes."""
-    fake_defs = [
-        {
-            "section": "Fake",
-            "items": [
-                {"titleEN": None},                # Should be skipped
-                {"titleEN": "NotFound"},         # Value is None → skip
-                {"titleEN": "Battery Power"},    # Will be included
-            ],
-        }
-    ]
-    monkeypatch.setattr(
-        "custom_components.deye_inverter.sensor._DEFINITIONS", fake_defs
-    )
 
-    coordinator = MagicMock()
-    coordinator.data = {
-        "Battery Power": 500,
-        "NotFound": None,
-    }
-    coordinator.serial = "ABC123"
+# === Description builder ===
 
-    sensor = DeyeInverterSensor(coordinator)
-    attrs = sensor.extra_state_attributes
+def test_build_descriptions_covers_readable_metrics():
+    """All metrics within the read register blocks get a description."""
+    descriptions = build_descriptions()
+    titles = {d.metric_title for d in descriptions}
 
-    assert "Battery Power" in attrs
-    assert "NotFound" not in attrs
+    assert len(descriptions) >= 40
+    assert "PV1 Power" in titles
+    assert "Total Grid Production" in titles
+    assert "Battery Status" in titles
+    assert "Alert" in titles
+
+def test_build_descriptions_skips_out_of_range_registers():
+    """Items whose registers are outside the read blocks are excluded."""
+    titles = {d.metric_title for d in build_descriptions()}
+
+    for absent in (
+        "Inverter ID",
+        "Communication Board Version No.",
+        "Control Board Version No.",
+        "Work Mode",
+        "Time of use",
+    ):
+        assert absent not in titles
+
+def test_description_metadata_power():
+    desc = _description("PV1 Power")
+    assert desc.device_class is SensorDeviceClass.POWER
+    assert desc.state_class is SensorStateClass.MEASUREMENT
+    assert desc.native_unit_of_measurement == "W"
+
+def test_description_metadata_energy():
+    desc = _description("Total Grid Production")
+    assert desc.device_class is SensorDeviceClass.ENERGY
+    assert desc.state_class is SensorStateClass.TOTAL_INCREASING
+    assert desc.native_unit_of_measurement == "kWh"
+
+def test_description_metadata_temperature():
+    desc = _description("Battery Temperature")
+    assert desc.device_class is SensorDeviceClass.TEMPERATURE
+    assert desc.native_unit_of_measurement == "°C"
+
+def test_description_metadata_battery_soc():
+    desc = _description("Battery SOC")
+    assert desc.device_class is SensorDeviceClass.BATTERY
+    assert desc.native_unit_of_measurement == "%"
+
+def test_description_metadata_status_is_diagnostic_text():
+    """Status/enum metrics are plain text diagnostic sensors."""
+    for title in ("Battery Status", "Alert"):
+        desc = _description(title)
+        assert desc.device_class is None
+        assert desc.state_class is None
+        assert desc.native_unit_of_measurement is None
+        assert desc.entity_category is EntityCategory.DIAGNOSTIC
+
+def test_description_unique_keys():
+    keys = [d.key for d in build_descriptions()]
+    assert len(keys) == len(set(keys))
+
+
+# === Per-metric sensor ===
+
+def test_metric_sensor_value_and_unique_id(mock_coordinator):
+    sensor = DeyeMetricSensor(mock_coordinator, _description("PV1 Power"))
+
+    assert sensor.unique_id == "ABC123_pv1_power"
+    assert sensor.native_value == 500
+    assert sensor.available is True
+    assert sensor.device_info["identifiers"] == {("deye_inverter", "ABC123")}
+
+def test_metric_sensor_missing_value_unavailable(mock_coordinator):
+    sensor = DeyeMetricSensor(mock_coordinator, _description("Battery SOC"))
+
+    assert sensor.native_value is None
+    assert sensor.available is False
+
+def test_metric_sensor_handles_none_data(mock_coordinator):
+    mock_coordinator.data = None
+    sensor = DeyeMetricSensor(mock_coordinator, _description("PV1 Power"))
+
+    assert sensor.native_value is None
+    assert sensor.available is False

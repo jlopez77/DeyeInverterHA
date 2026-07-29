@@ -124,7 +124,8 @@ def test_total_grid_production(monkeypatch):
     }])
     result = parser.parse_raw([0x0001, 0x0002])
     assert "Total Grid Production" in result
-    assert "(raw:" in result["Total Grid Production"]
+    # Reversed word order: 0x0002_0001 * 0.1
+    assert result["Total Grid Production"] == pytest.approx(0x00020001 * 0.1, abs=0.01)
 
 def test_load_definitions_full_fallback(monkeypatch, caplog):
     monkeypatch.setattr(parser.pkg_resources, "read_text", lambda *a, **k: (_ for _ in ()).throw(Exception("pkg fail")))
@@ -332,7 +333,7 @@ def test_parse_raw_enum_mapping(monkeypatch):
     raw = [0] * 242
     raw[241] = 2
     result = parse_raw(raw)
-    assert result["Mode Status"] == "Manual (2)"
+    assert result["Mode Status"] == "Manual"
 
 def test_parse_raw_enum_unknown(monkeypatch):
     fake_defs = [
