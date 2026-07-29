@@ -8,6 +8,8 @@ __pycache__/
 
 # Logs, cobertura, editor
 *.log
+.coverage
+coverage.xml
 .pytest_cache/
 .vscode/
 .idea/

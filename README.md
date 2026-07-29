@@ -36,19 +36,17 @@ This integration is **not yet in HACS**. You can install it manually for now:
 ### Manual Steps
 
 1. Download or clone this repository:
+
    ```bash
    git clone https://github.com/jlopez77/DeyeInverterHA.git
+   ```
 
-2. Copy the folder:
+2. Copy the folder `custom_components/deye_inverter` into your Home Assistant config directory:
 
-   ```bash
-   custom_components/deyeinverter
+   ```
+   config/custom_components/deye_inverter
+   ```
 
-  into your Home Assistant config directory:
-
-   ```bash
-   config/custom_components/deyeinverter
-```
 3. Restart Home Assistant.
 
 4. In the UI, go to Settings > Devices & Services > Add Integration, search for Deye Inverter, and follow the setup steps.
@@ -61,7 +59,11 @@ You will be asked for:
 - Host: The IP address of your inverter
 - Port: Modbus TCP port (default: 8899)
 - Serial Number: The datalogger’s serial number (something like 17XXXXXX)
-- Installed Power (kW): For production % estimation
+- Installed Power (kW): Used for the *Production* (%) sensor
+
+The connection is tested before the entry is created — if the inverter is not
+reachable (wrong host/port/serial, or another client is holding the datalogger's
+single TCP slot) the form shows an error instead of creating a broken entry.
 
 ## Entities
 
@@ -69,6 +71,9 @@ All entities are grouped under one **Deye Inverter** device.
 
 ### Aggregate Sensor
 `sensor.deye_inverter` — total inverter PV production (PV1 + PV2), kept for backward compatibility.
+
+### Production Sensor
+*Production* — current PV output as a percentage of the installed power you configured (e.g. 800 W of 5 kW → 16 %).
 
 > **Breaking change:** this sensor no longer exposes the inverter metrics as
 > `extra_state_attributes`. Templates reading attributes from it must switch to
@@ -86,11 +91,14 @@ One sensor per metric, named after the metric (e.g. *PV1 Power*, *Battery SOC*, 
 Available metrics:
 
 - PV: PV1/PV2 Voltage, Current, Power; Daily/Total Production; Micro-inverter Power
-- Battery: Voltage, Current, Power, SOC, Temperature, Status
-- Grid: Grid Voltage L1/L2, Grid Status, Grid-connected Status, Total Grid Power, Total Grid Production, Daily/Total Energy Bought and Sold, Internal/External CT L1/L2 Power
-- Load: Load L1/L2 Power, Load Voltage, Total Load Power, Daily/Total Load Consumption, SmartLoad Enable Status
-- Inverter: Running Status, Total Power, Current L1/L2, Inverter L1/L2 Power, AC/DC Temperature, Gen Power, Gen-connected Status
+- Battery: Voltage, Current, Power, SOC, Temperature, Status, Daily/Total Charge and Discharge
+- Grid: Grid Voltage L1/L2, Grid Current L1/L2, Grid Frequency, Grid Status, Grid-connected Status, Total Grid Power, Total Grid Production, Daily/Total Energy Bought and Sold, Internal/External CT L1/L2 Power
+- Load: Load L1/L2 Power, Load Voltage, Load Frequency, Total Load Power, Daily/Total Load Consumption, SmartLoad Enable Status
+- Inverter: Running Status, Total Power, Current L1/L2, Inverter L1/L2 Power, AC/DC Temperature, Gen Power, Gen-connected Status, Inverter ID, Board versions, Work Mode
 - Alert (bitfield, hex string)
+
+The battery Daily/Total Charge and Discharge sensors can be used in the Energy
+dashboard's battery section.
 
 ## Troubleshooting
 
@@ -102,7 +110,7 @@ Check if the serial number is correct
 
 ⚙️ Integration not showing up:
 
-Make sure files are correctly placed under config/custom_components/deyeinverter
+Make sure files are correctly placed under `config/custom_components/deye_inverter`
 
 Restart Home Assistant
 

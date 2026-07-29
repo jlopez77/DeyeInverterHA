@@ -9,6 +9,7 @@ from custom_components.deye_inverter.entity_descriptions import build_descriptio
 from custom_components.deye_inverter.sensor import (
     DeyeInverterSensor,
     DeyeMetricSensor,
+    DeyeProductionPercentSensor,
 )
 
 
@@ -21,6 +22,7 @@ def mock_coordinator():
         "Battery Power": 100,
     }
     coordinator.serial = "ABC123"
+    coordinator.installed_power = 5
     coordinator.last_update_success = True
     return coordinator
 
@@ -76,6 +78,31 @@ def test_native_value_fallback():
     assert sensor.native_value == 0.0
 
 
+# === Production percent sensor ===
+
+def test_production_percent_value(mock_coordinator):
+    """PV1+PV2 relative to installed power in kW."""
+    sensor = DeyeProductionPercentSensor(mock_coordinator)
+
+    # (500 + 300) W of 5 kW installed -> 16.0 %
+    assert sensor.native_value == 16.0
+    assert sensor.native_unit_of_measurement == "%"
+    assert sensor.unique_id == "ABC123_production_percent"
+
+def test_production_percent_no_installed_power(mock_coordinator):
+    """Without a usable installed power the sensor reports None."""
+    mock_coordinator.installed_power = 0
+    assert DeyeProductionPercentSensor(mock_coordinator).native_value is None
+
+    mock_coordinator.installed_power = "bad"
+    assert DeyeProductionPercentSensor(mock_coordinator).native_value is None
+
+def test_production_percent_bad_data(mock_coordinator):
+    """Bad PV values report None instead of raising."""
+    mock_coordinator.data = {"PV1 Power": "bad"}
+    assert DeyeProductionPercentSensor(mock_coordinator).native_value is None
+
+
 # === Description builder ===
 
 def test_build_descriptions_covers_readable_metrics():
@@ -89,18 +116,31 @@ def test_build_descriptions_covers_readable_metrics():
     assert "Battery Status" in titles
     assert "Alert" in titles
 
-def test_build_descriptions_skips_out_of_range_registers():
-    """Items whose registers are outside the read blocks are excluded."""
-    titles = {d.metric_title for d in build_descriptions()}
+def test_build_descriptions_covers_device_info_metrics():
+    """Metrics in the optional read blocks (device info, work mode) exist."""
+    descriptions = {d.metric_title: d for d in build_descriptions()}
 
-    for absent in (
+    for title in (
         "Inverter ID",
         "Communication Board Version No.",
         "Control Board Version No.",
         "Work Mode",
         "Time of use",
     ):
-        assert absent not in titles
+        assert title in descriptions
+        assert descriptions[title].entity_category is EntityCategory.DIAGNOSTIC
+
+
+def test_registers_outside_read_blocks_are_skipped():
+    """An item whose registers are not covered by any read block is excluded."""
+    from custom_components.deye_inverter.entity_descriptions import (
+        _registers_in_read_range,
+    )
+
+    assert _registers_in_read_range(["0x003B"]) is True
+    assert _registers_in_read_range(["0xFFFF"]) is False
+    assert _registers_in_read_range(["0x003B", "0xFFFF"]) is False
+    assert _registers_in_read_range([]) is False
 
 def test_description_metadata_power():
     desc = _description("PV1 Power")
@@ -118,6 +158,19 @@ def test_description_metadata_temperature():
     desc = _description("Battery Temperature")
     assert desc.device_class is SensorDeviceClass.TEMPERATURE
     assert desc.native_unit_of_measurement == "°C"
+
+def test_description_metadata_frequency():
+    for title in ("Grid Frequency", "Load Frequency"):
+        desc = _description(title)
+        assert desc.device_class is SensorDeviceClass.FREQUENCY
+        assert desc.state_class is SensorStateClass.MEASUREMENT
+        assert desc.native_unit_of_measurement == "Hz"
+
+def test_description_metadata_battery_energy():
+    for title in ("Total Battery Charge", "Total Battery Discharge"):
+        desc = _description(title)
+        assert desc.device_class is SensorDeviceClass.ENERGY
+        assert desc.state_class is SensorStateClass.TOTAL_INCREASING
 
 def test_description_metadata_battery_soc():
     desc = _description("Battery SOC")

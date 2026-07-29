@@ -16,16 +16,14 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     UnitOfEnergy,
+    UnitOfFrequency,
     UnitOfPower,
     UnitOfTemperature,
 )
 from homeassistant.util import slugify
 
+from .const import REGISTER_BLOCKS
 from .InverterDataParser import _DEFINITIONS
-
-# Register blocks actually read by InverterData.fetch_data
-_BLOCK1 = range(0x003B, 0x0070 + 1)
-_BLOCK2 = range(0x0096, 0x00C3 + 1)
 
 _UNIT_METADATA: Dict[str, Dict[str, Any]] = {
     "w": {
@@ -58,6 +56,11 @@ _UNIT_METADATA: Dict[str, Dict[str, Any]] = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfTemperature.CELSIUS,
     },
+    "hz": {
+        "device_class": SensorDeviceClass.FREQUENCY,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfFrequency.HERTZ,
+    },
 }
 
 
@@ -69,14 +72,14 @@ class DeyeSensorDescription(SensorEntityDescription):
 
 
 def _registers_in_read_range(registers: Sequence[str]) -> bool:
-    """True if every register of the item is covered by the two read blocks."""
+    """True if every register of the item is covered by the read blocks."""
     if not registers:
         return False
     try:
         regs = [int(r, 16) for r in registers]
     except (TypeError, ValueError):
         return False
-    return all(r in _BLOCK1 or r in _BLOCK2 for r in regs)
+    return all(any(start <= r <= end for start, end in REGISTER_BLOCKS) for r in regs)
 
 
 def build_descriptions() -> List[DeyeSensorDescription]:
@@ -102,12 +105,10 @@ def build_descriptions() -> List[DeyeSensorDescription]:
             unit = str(item.get("unit") or "").strip().lower()
             meta = _UNIT_METADATA.get(unit)
 
-            is_text = meta is None
-            category: Optional[EntityCategory] = None
-            if is_text and (
-                item.get("interactionType") == 2 or item.get("parserRule") == 6
-            ):
-                category = EntityCategory.DIAGNOSTIC
+            # Unit-less metrics are statuses, device info, or bitfields
+            category: Optional[EntityCategory] = (
+                EntityCategory.DIAGNOSTIC if meta is None else None
+            )
 
             descriptions.append(
                 DeyeSensorDescription(
