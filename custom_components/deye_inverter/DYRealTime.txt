@@ -533,6 +533,7 @@
         "parserRule": 1,
         "inputRanges": [],
         "ratio": 1,
+        "signed": false,
         "unit": ""
       },
       {
@@ -543,6 +544,7 @@
         "parserRule": 1,
         "inputRanges": [],
         "ratio": 1,
+        "signed": false,
         "unit": ""
       },
       {

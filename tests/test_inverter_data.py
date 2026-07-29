@@ -20,7 +20,6 @@ def patch_pysolarmanv5():
 async def test_trigger_reload_after_max_errors():
     """Test that integration reload is triggered after max consecutive read errors."""
     hass = MagicMock()
-    hass.services.async_call = AsyncMock()
 
     config_entry = MagicMock()
     config_entry.entry_id = "test_entry"
@@ -39,12 +38,8 @@ async def test_trigger_reload_after_max_errors():
         with pytest.raises(Exception):
             await inverter.fetch_data()
 
-    hass.services.async_call.assert_called_once_with(
-        "homeassistant",
-        "reload_config_entry",
-        {"entry_id": "test_entry"},
-        blocking=False,
-    )
+    hass.config_entries.async_reload.assert_called_once_with("test_entry")
+    hass.async_create_task.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -69,7 +64,7 @@ async def test_no_reload_before_threshold():
         with pytest.raises(Exception):
             await inverter.fetch_data()
 
-    hass.services.async_call.assert_not_called()
+    hass.config_entries.async_reload.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -93,6 +88,43 @@ async def test_fetch_data_success_returns_parsed():
 
     result = await inverter.fetch_data()
     assert isinstance(result, dict)
+
+@pytest.mark.asyncio
+async def test_fetch_data_reads_optional_blocks():
+    """All four blocks read fine: device-info metrics are parsed."""
+    inverter = InverterData(host="localhost", port=8899, serial="1")
+    inverter._modbus.read_holding_registers = MagicMock(
+        side_effect=lambda register_addr, quantity: [1] * quantity
+    )
+
+    result = await inverter.fetch_data()
+
+    assert "PV1 Power" in result
+    assert "Inverter ID" in result
+    assert "Communication Board Version No." in result
+
+
+@pytest.mark.asyncio
+async def test_fetch_data_optional_blocks_best_effort():
+    """Optional block failures do not fail the update or count as errors."""
+    inverter = InverterData(host="localhost", port=8899, serial="1")
+    calls = {"n": 0}
+
+    def read(register_addr, quantity):
+        calls["n"] += 1
+        if calls["n"] <= 2:  # core blocks succeed
+            return [1] * quantity
+        raise RuntimeError("unsupported block")
+
+    inverter._modbus.read_holding_registers = MagicMock(side_effect=read)
+
+    result = await inverter.fetch_data()
+
+    assert "PV1 Power" in result
+    assert "Inverter ID" not in result
+    assert "Work Mode" not in result
+    assert inverter._error_count == 0
+
 
 @pytest.mark.asyncio
 async def test_fetch_data_without_hass_or_entry():
@@ -123,7 +155,7 @@ async def test_fetch_data_success_no_reload_trigger():
     result = await inverter.fetch_data()
 
     assert isinstance(result, dict)
-    hass.services.async_call.assert_not_called()
+    hass.config_entries.async_reload.assert_not_called()
 
 @pytest.mark.asyncio
 async def test_trigger_reload_logs_error_if_missing_parts(caplog):

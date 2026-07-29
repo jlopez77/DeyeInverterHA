@@ -89,18 +89,31 @@ def test_build_descriptions_covers_readable_metrics():
     assert "Battery Status" in titles
     assert "Alert" in titles
 
-def test_build_descriptions_skips_out_of_range_registers():
-    """Items whose registers are outside the read blocks are excluded."""
-    titles = {d.metric_title for d in build_descriptions()}
+def test_build_descriptions_covers_device_info_metrics():
+    """Metrics in the optional read blocks (device info, work mode) exist."""
+    descriptions = {d.metric_title: d for d in build_descriptions()}
 
-    for absent in (
+    for title in (
         "Inverter ID",
         "Communication Board Version No.",
         "Control Board Version No.",
         "Work Mode",
         "Time of use",
     ):
-        assert absent not in titles
+        assert title in descriptions
+        assert descriptions[title].entity_category is EntityCategory.DIAGNOSTIC
+
+
+def test_registers_outside_read_blocks_are_skipped():
+    """An item whose registers are not covered by any read block is excluded."""
+    from custom_components.deye_inverter.entity_descriptions import (
+        _registers_in_read_range,
+    )
+
+    assert _registers_in_read_range(["0x003B"]) is True
+    assert _registers_in_read_range(["0xFFFF"]) is False
+    assert _registers_in_read_range(["0x003B", "0xFFFF"]) is False
+    assert _registers_in_read_range([]) is False
 
 def test_description_metadata_power():
     desc = _description("PV1 Power")
