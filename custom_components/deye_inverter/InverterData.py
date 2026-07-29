@@ -2,13 +2,16 @@ import asyncio
 import logging
 from typing import Any, Dict
 
-from pymodbus.exceptions import ModbusException
 from pysolarmanv5.pysolarmanv5 import PySolarmanV5, NoSocketAvailableError
 
 from .const import DEFAULT_MODBUS_TIMEOUT
 from .InverterDataParser import parse_raw
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class ModbusReadError(Exception):
+    """Raised when reading registers from the inverter fails."""
 
 
 class InverterData:
@@ -77,7 +80,7 @@ class InverterData:
                     self._max_errors,
                 )
                 await self._trigger_reload()
-            raise ModbusException(e)
+            raise ModbusReadError(str(e)) from e
 
         _LOGGER.debug("Regs block1 (%s, %s): %s", first_addr, first_len, regs1)
         _LOGGER.debug("Regs block2 (%s, %s): %s", second_addr, second_len, regs2)
