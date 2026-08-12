@@ -159,7 +159,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 0.1,
+        "ratio": 0.01,
         "unit": "A"
       },
       {
