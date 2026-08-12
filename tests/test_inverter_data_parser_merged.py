@@ -1044,7 +1044,7 @@ def test_power_register_scaling():
     raw[register_index(0x00A9)] = 0x10000 - 432  # Total Grid Power, negative
     raw[register_index(0x00AA)] = 0x10000 - 432  # External CT L1
     raw[register_index(0x00BF)] = 0x10000 - 10  # Battery Current, negative
-    raw[register_index(0x00B7)] = 50  # Battery Voltage (x0.1)
+    raw[register_index(0x00B7)] = 5421 # Battery Voltage (x0.1)
 
     result = parse_raw(raw)
     assert result["Total Load Power"] == pytest.approx(301)
@@ -1054,5 +1054,5 @@ def test_power_register_scaling():
     # V x I must reproduce Battery Power
     assert result["Battery Current"] == pytest.approx(-9)
     assert result["Battery Voltage"] * result["Battery Current"] == pytest.approx(
-        -500, abs=1
+        -542, abs=1
     )
