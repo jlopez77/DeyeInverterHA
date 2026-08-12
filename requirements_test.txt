@@ -5,4 +5,4 @@ pytest-homeassistant-custom-component
 flake8
 mypy
 black
-pysolarmanv5>=1.0.0
+pysolarmanv5>=3.0.6
