@@ -280,7 +280,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 10,
+        "ratio": 1,
         "unit": "W"
       },
       {
@@ -290,7 +290,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 10,
+        "ratio": 1,
         "unit": "W"
       },
       {
