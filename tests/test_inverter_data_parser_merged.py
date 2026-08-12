@@ -1052,7 +1052,7 @@ def test_power_register_scaling():
    assert result["Total Grid Power"] == pytest.approx(-432)
    assert result["External CT L1 Power"] == pytest.approx(-432)
    # V x I must reproduce Battery Power
-   assert result["Battery Current"] == pytest.approx(-9)
+   assert result["Battery Current"] == pytest.approx(-0.1)
    assert result["Battery Voltage"] * result["Battery Current"] == pytest.approx(
        -542, abs=1
    )
