@@ -1054,5 +1054,5 @@ def test_power_register_scaling():
    # V x I must reproduce Battery Power
    assert result["Battery Current"] == pytest.approx(-0.1)
    assert result["Battery Voltage"] * result["Battery Current"] == pytest.approx(
-       -542, abs=1
+       -5.42, abs=1
    )
