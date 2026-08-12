@@ -130,14 +130,22 @@ def test_enum_mapping_unknown_value(monkeypatch):
 
 def test_total_battery_charge_reversed(monkeypatch):
     """Battery totals use the reversed (lo, hi) word order."""
-    monkeypatch.setattr(parser, "_DEFINITIONS", [{
-        "items": [{
-            "titleEN": "Total Battery Charge",
-            "registers": ["0x003B", "0x003C"],
-            "parserRule": 3,
-            "ratio": 0.1
-        }]
-    }])
+    monkeypatch.setattr(
+        parser,
+        "_DEFINITIONS",
+        [
+            {
+                "items": [
+                    {
+                        "titleEN": "Total Battery Charge",
+                        "registers": ["0x003B", "0x003C"],
+                        "parserRule": 3,
+                        "ratio": 0.1,
+                    }
+                ]
+            }
+        ],
+    )
     # lo=67, hi=0 -> 67 * 0.1 = 6.7 (matches live inverter reading)
     result = parser.parse_raw([67, 0])
     assert result["Total Battery Charge"] == pytest.approx(6.7)
@@ -1022,3 +1030,36 @@ def test_parse_skips_item_with_no_registers(monkeypatch):
 
     result = parser.parse_raw([123])
     assert "NoRegsField" not in result
+
+
+# === Register scaling verified against a real inverter ===
+
+
+def test_power_register_scaling():
+    """Load and CT/grid power registers report in units of 10 W.
+
+    Verified on a real inverter: with these ratios the instantaneous
+    balance (load + export == inverter output) closes to ~0.1%, and the
+    load figure matches the owner's metered house consumption. With
+    ratio 1 the balance misses by ~90%.
+    """
+    from custom_components.deye_inverter.InverterDataParser import register_index
+
+    raw = [0] * 117
+    raw[register_index(0x00B2)] = 301  # Total Load Power
+    raw[register_index(0x00B0)] = 301  # Load L1 Power
+    raw[register_index(0x00A9)] = 0x10000 - 432  # Total Grid Power, negative
+    raw[register_index(0x00AA)] = 0x10000 - 432  # External CT L1
+    raw[register_index(0x00BF)] = 0x10000 - 9  # Battery Current, negative
+    raw[register_index(0x00B7)] = 5462  # Battery Voltage (x0.01)
+
+    result = parse_raw(raw)
+    assert result["Total Load Power"] == pytest.approx(3010)
+    assert result["Load L1 Power"] == pytest.approx(3010)
+    assert result["Total Grid Power"] == pytest.approx(-4320)
+    assert result["External CT L1 Power"] == pytest.approx(-4320)
+    # V x I must reproduce Battery Power
+    assert result["Battery Current"] == pytest.approx(-0.9)
+    assert result["Battery Voltage"] * result["Battery Current"] == pytest.approx(
+        -49, abs=1
+    )

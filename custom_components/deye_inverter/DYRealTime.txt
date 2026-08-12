@@ -159,7 +159,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 0.01,
+        "ratio": 0.1,
         "unit": "A"
       },
       {
@@ -250,7 +250,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": 10,
         "unit": "W"
       },
       {
@@ -280,7 +280,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": 10,
         "unit": "W"
       },
       {
@@ -290,7 +290,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": 10,
         "unit": "W"
       },
       {
@@ -300,7 +300,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": 10,
         "unit": "W"
       },
       {
@@ -310,7 +310,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": 10,
         "unit": "W"
       },
       {
@@ -405,7 +405,7 @@
         "interactionType": 1,
         "parserRule": 1,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": 10,
         "unit": "W"
       },
       {
@@ -415,7 +415,7 @@
         "interactionType": 1,
         "parserRule": 1,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": 10,
         "unit": "W"
       },
       {
@@ -425,7 +425,7 @@
         "interactionType": 1,
         "parserRule": 1,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": 10,
         "unit": "W"
       },
       {
