@@ -9,5 +9,5 @@
   "issue_tracker": "https://github.com/jlopez77/DeyeInverterHA/issues",
   "requirements": ["pysolarmanv5>=1.0.0"],
   "single_config_entry": false,
-  "version": "1.0.0"
+  "version": "2.0.0"
 }
