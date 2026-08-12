@@ -27,7 +27,7 @@ async def test_async_setup_entry():
     hass.config_entries.async_forward_entry_setups = AsyncMock()
 
     with patch(
-        "custom_components.deye_inverter.coordinator.DeyeDataUpdateCoordinator"
+        "custom_components.deye_inverter.DeyeDataUpdateCoordinator"
     ) as mock_coordinator_class:
         mock_coordinator = AsyncMock()
         mock_coordinator.async_config_entry_first_refresh = AsyncMock()

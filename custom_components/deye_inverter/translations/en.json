@@ -1,0 +1,23 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to your Deye inverter",
+        "description": "Enter the connection details of the inverter's datalogger (Modbus TCP).",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "serial": "Datalogger serial number",
+          "installed_power": "Installed power (kW)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the inverter. Check the host, port and serial number, and make sure no other client is connected to the datalogger.",
+      "invalid_serial": "The serial number must contain only digits."
+    },
+    "abort": {
+      "already_configured": "This inverter is already configured."
+    }
+  }
+}
