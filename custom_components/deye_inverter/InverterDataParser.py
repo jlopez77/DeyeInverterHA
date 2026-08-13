@@ -1,13 +1,20 @@
 import json
 import logging
+from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import importlib.resources as pkg_resources
 
-from .const import REGISTER_BLOCKS
+from .const import DEFAULT_MOD, REGISTER_BLOCKS
+
+if TYPE_CHECKING:  # pragma: no cover - import cycle only exists for typing
+    from .profiles import Profile
 
 _LOGGER = logging.getLogger(__name__)
+
+# Definition keys whose value may be a per-variant list instead of a scalar
+_VARIANT_KEYS = ("ratio", "offset")
 
 
 def _load_definitions() -> Union[Dict[str, Any], List[Any]]:
@@ -27,6 +34,50 @@ def _load_definitions() -> Union[Dict[str, Any], List[Any]]:
         return {}
 
 
+def iter_sections(
+    definitions: Union[Dict[str, Any], List[Any], Any],
+) -> Sequence[Dict[str, Any]]:
+    """Return the sections of a definitions document, whatever shape it has."""
+    if isinstance(definitions, dict):
+        return list(definitions.values())
+    if isinstance(definitions, list):
+        return definitions
+    _LOGGER.error("Invalid definitions type: %s", type(definitions))
+    return []
+
+
+def select_variant(value: Any, mod: int) -> Any:
+    """Pick the entry a scaling variant uses from a per-variant list.
+
+    Scalars are returned unchanged, so only the items that actually differ
+    between inverter generations need a list. A variant beyond the end of the
+    list reuses the last entry, matching the community profiles this borrows
+    the convention from.
+    """
+    if not isinstance(value, list) or not value:
+        return value
+    return value[mod] if 0 <= mod < len(value) else value[-1]
+
+
+def resolve_variant(
+    definitions: Union[Dict[str, Any], List[Any]], mod: int
+) -> Union[Dict[str, Any], List[Any]]:
+    """Collapse the per-variant lists in the definitions down to scalars.
+
+    Done once per variant at load time, so the polling path keeps reading
+    plain numbers and stays unaware that variants exist.
+    """
+    resolved = deepcopy(definitions)
+    for section in iter_sections(resolved):
+        if not isinstance(section, dict):
+            continue
+        for item in section.get("items", []):
+            for key in _VARIANT_KEYS:
+                if key in item:
+                    item[key] = select_variant(item[key], mod)
+    return resolved
+
+
 def register_index(reg: int) -> Optional[int]:
     """Map a register address to its index in the flat register list."""
     offset = 0
@@ -37,7 +88,11 @@ def register_index(reg: int) -> Optional[int]:
     return None
 
 
-_DEFINITIONS = _load_definitions()
+# Definitions exactly as shipped, per-variant lists included
+_RAW_DEFINITIONS = _load_definitions()
+# ...and resolved for the default variant, which every module-level consumer
+# (and every caller that passes no profile) uses.
+_DEFINITIONS = resolve_variant(_RAW_DEFINITIONS, DEFAULT_MOD)
 
 
 def _build_enum_mappings(
@@ -45,14 +100,9 @@ def _build_enum_mappings(
 ) -> Dict[Tuple[int, str], Dict[int, str]]:
     """Build (register, title) -> {key: label} from optionRanges."""
     mappings: Dict[Tuple[int, str], Dict[int, str]] = {}
-    sections: Sequence[Dict[str, Any]] = (
-        list(definitions.values())
-        if isinstance(definitions, dict)
-        else definitions  # type: ignore[assignment]
-    )
 
     # Only build enums if valid optionRanges exist AND interactionType == 2
-    for section in sections:
+    for section in iter_sections(definitions):
         for item in section.get("items", []):
             option_ranges = item.get("optionRanges")
             if (
@@ -135,7 +185,14 @@ def parse_gen_connected_status(value: int) -> str:
     return "On" if value == 1 else "Off"
 
 
-def parse_raw(raw: Sequence[Optional[int]]) -> Dict[str, Any]:
+def parse_raw(
+    raw: Sequence[Optional[int]], profile: Optional["Profile"] = None
+) -> Dict[str, Any]:
+    """Parse a flat register list into {metric title: value}.
+
+    Without a profile the default scaling variant is used, so existing
+    callers and tests keep the documented behaviour.
+    """
     result: Dict[str, Any] = {}
 
     REVERSED_FIELDS = {
@@ -148,15 +205,10 @@ def parse_raw(raw: Sequence[Optional[int]]) -> Dict[str, Any]:
         "Total Battery Discharge",
     }
 
-    if isinstance(_DEFINITIONS, dict):
-        sections: Sequence[Dict[str, Any]] = list(_DEFINITIONS.values())
-    elif isinstance(_DEFINITIONS, list):
-        sections = _DEFINITIONS  # type: ignore[assignment]
-    else:
-        _LOGGER.error("Invalid definitions type: %s", type(_DEFINITIONS))
-        return result
+    definitions = _DEFINITIONS if profile is None else profile.definitions
+    enum_mappings = _ENUM_MAPPINGS if profile is None else profile.enum_mappings
 
-    for section in sections:
+    for section in iter_sections(definitions):
         for item in section.get("items", []):
             title = item.get("titleEN")
             if not title:
@@ -215,7 +267,7 @@ def parse_raw(raw: Sequence[Optional[int]]) -> Dict[str, Any]:
                     # mode keeps its key, without it the key is shifted by 2.
                     mode, solar_sell = block
                     key = 0 if mode == 0 else (mode if solar_sell else mode + 2)
-                    wm_mapping = _ENUM_MAPPINGS.get((reg_key, title), {})
+                    wm_mapping = enum_mappings.get((reg_key, title), {})
                     result[title] = wm_mapping.get(
                         key, f"Unknown ({mode}/{solar_sell})"
                     )
@@ -237,7 +289,7 @@ def parse_raw(raw: Sequence[Optional[int]]) -> Dict[str, Any]:
                     continue
 
                 # Enum mapping by (register, title)
-                mapping = _ENUM_MAPPINGS.get((reg_key, title))
+                mapping = enum_mappings.get((reg_key, title))
                 if mapping and raw_int in mapping:
                     result[title] = mapping[raw_int]
                     continue

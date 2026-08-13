@@ -8,7 +8,11 @@
           "host": "Host",
           "port": "Port",
           "serial": "Datalogger serial number",
-          "installed_power": "Installed power (kW)"
+          "installed_power": "Installed power (kW)",
+          "mod": "Power scaling variant"
+        },
+        "data_description": {
+          "mod": "Not every generation of the single-phase hybrid family reports the same units. Leave the default unless load and grid power read ten times too low; you can change this later in the integration options."
         }
       }
     },
@@ -18,6 +22,29 @@
     },
     "abort": {
       "already_configured": "This inverter is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Deye inverter options",
+        "description": "Change the power scaling variant if load, grid and CT power read ten times too low (or too high) compared with your meter.",
+        "data": {
+          "mod": "Power scaling variant"
+        },
+        "data_description": {
+          "mod": "Check it with the balance PV output ≈ load + grid + battery: it only adds up on the right variant. The integration reloads when you save."
+        }
+      }
+    }
+  },
+  "selector": {
+    "mod": {
+      "options": {
+        "0": "Standard — documented scaling (default)",
+        "1": "Load, grid and CT power ×10",
+        "2": "Load, grid and CT power ×10, battery current ×10 (10–12 kW, e.g. SUN-10K-SG02LP1)"
+      }
     }
   }
 }

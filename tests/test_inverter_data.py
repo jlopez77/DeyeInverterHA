@@ -168,3 +168,24 @@ async def test_trigger_reload_logs_error_if_missing_parts(caplog):
         await inverter._trigger_reload()
 
     assert "Cannot reload: 'hass' or 'config_entry' is missing." in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_fetch_data_applies_the_configured_variant():
+    """The variant given to the client is applied to the parsed values."""
+    from custom_components.deye_inverter.InverterDataParser import register_index
+
+    def read(register_addr, quantity):
+        regs = [0] * quantity
+        if register_addr <= 0x00B2 <= register_addr + quantity - 1:
+            regs[0x00B2 - register_addr] = 301  # Total Load Power
+        return regs
+
+    default = InverterData(host="localhost", port=8899, serial="1")
+    default._modbus.read_holding_registers = MagicMock(side_effect=read)
+    scaled = InverterData(host="localhost", port=8899, serial="1", mod=2)
+    scaled._modbus.read_holding_registers = MagicMock(side_effect=read)
+
+    assert register_index(0x00B2) is not None
+    assert (await default.fetch_data())["Total Load Power"] == pytest.approx(301)
+    assert (await scaled.fetch_data())["Total Load Power"] == pytest.approx(3010)
