@@ -31,5 +31,10 @@ CORE_REGISTER_BLOCKS = [
 OPTIONAL_REGISTER_BLOCKS = [
     (0x0003, 0x000E),  # device info: inverter id, board versions
     (0x00F4, 0x00F8),  # work mode, time of use
+    (0x0010, 0x0012),  # rated power, MPPT and phase counts
 ]
+# Rated power at or above this (W) means the inverter reports power in 10 W
+# units, i.e. scaling variant 2. Inferred from hardware, not documented, so
+# it only preselects the variant — the user always has the final say.
+TEN_WATT_UNITS_FROM_RATED_POWER = 10000
 REGISTER_BLOCKS = CORE_REGISTER_BLOCKS + OPTIONAL_REGISTER_BLOCKS

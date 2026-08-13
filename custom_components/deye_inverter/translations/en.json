@@ -12,7 +12,7 @@
           "mod": "Power scaling variant"
         },
         "data_description": {
-          "mod": "Not every generation of the single-phase hybrid family reports the same units. Leave the default unless load and grid power read ten times too low; you can change this later in the integration options."
+          "mod": "Leave this on automatic unless load and grid power read ten times too low: the variant is then derived from the rated power the inverter reports. You can change it later in the integration options."
         }
       }
     },
@@ -41,6 +41,7 @@
   "selector": {
     "mod": {
       "options": {
+        "auto": "Detect automatically (recommended)",
         "0": "Standard — documented scaling (default)",
         "1": "Load, grid and CT power ×10",
         "2": "Load, grid and CT power ×10, battery current ×10 (10–12 kW, e.g. SUN-10K-SG02LP1)"

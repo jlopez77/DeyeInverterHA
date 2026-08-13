@@ -12,7 +12,7 @@
           "mod": "Variante de escalado de potencia"
         },
         "data_description": {
-          "mod": "No todas las generaciones de la familia monofásica híbrida reportan las mismas unidades. Deja el valor por defecto salvo que la potencia de consumo y de red salga diez veces más baja; puedes cambiarlo después en las opciones de la integración."
+          "mod": "Déjalo en automático salvo que la potencia de consumo y de red salga diez veces más baja: la variante se deduce de la potencia nominal que reporta el inversor. Puedes cambiarlo después en las opciones de la integración."
         }
       }
     },
@@ -41,6 +41,7 @@
   "selector": {
     "mod": {
       "options": {
+        "auto": "Detectar automáticamente (recomendado)",
         "0": "Estándar — escalado documentado (por defecto)",
         "1": "Potencia de consumo, red y CT ×10",
         "2": "Potencia de consumo, red y CT ×10, corriente de batería ×10 (10–12 kW, p. ej. SUN-10K-SG02LP1)"

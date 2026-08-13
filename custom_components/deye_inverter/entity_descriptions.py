@@ -109,9 +109,12 @@ def build_descriptions(
             unit = str(item.get("unit") or "").strip().lower()
             meta = _UNIT_METADATA.get(unit)
 
-            # Unit-less metrics are statuses, device info, or bitfields
+            # Unit-less metrics are statuses, device info, or bitfields; items
+            # may also ask to be diagnostic while keeping their unit, for
+            # device properties that never change (rated power).
+            diagnostic = bool(item.get("diagnostic")) or meta is None
             category: Optional[EntityCategory] = (
-                EntityCategory.DIAGNOSTIC if meta is None else None
+                EntityCategory.DIAGNOSTIC if diagnostic else None
             )
 
             descriptions.append(
@@ -120,7 +123,12 @@ def build_descriptions(
                     name=title,
                     metric_title=title,
                     device_class=meta["device_class"] if meta else None,
-                    state_class=meta["state_class"] if meta else None,
+                    # Constant device properties are not worth recording
+                    state_class=(
+                        meta["state_class"]
+                        if meta and not item.get("diagnostic")
+                        else None
+                    ),
                     native_unit_of_measurement=meta["unit"] if meta else None,
                     entity_category=category,
                 )

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from pysolarmanv5.pysolarmanv5 import PySolarmanV5, NoSocketAvailableError
@@ -20,10 +21,21 @@ class ModbusReadError(Exception):
     """Raised when reading registers from the inverter fails."""
 
 
-def test_connection(host: str, port: int, serial: str) -> None:
-    """Open a connection and read one register; raises on any failure.
+@dataclass(frozen=True)
+class DeviceCapabilities:
+    """What the inverter reports about itself, when it reports it."""
 
-    Blocking: must run in an executor.
+    rated_power: Optional[float] = None  # W
+    mppts: Optional[int] = None
+    phases: Optional[int] = None
+
+
+def test_connection(host: str, port: int, serial: str) -> DeviceCapabilities:
+    """Open a connection, read one register and the device capabilities.
+
+    Raises on a failed connection; the capability read is best-effort, since
+    not every device exposes those registers. Blocking: must run in an
+    executor.
     """
     modbus = PySolarmanV5(
         host,
@@ -39,11 +51,36 @@ def test_connection(host: str, port: int, serial: str) -> None:
         modbus.read_holding_registers(
             register_addr=CORE_REGISTER_BLOCKS[0][0], quantity=1
         )
+        return _read_capabilities(modbus)
     finally:
         try:
             modbus.disconnect()
         except Exception:  # pragma: no cover - best-effort cleanup
             pass
+
+
+def _read_capabilities(modbus: PySolarmanV5) -> DeviceCapabilities:
+    """Read rated power (0x0010-0x0011) and the counts packed in 0x0012."""
+    try:
+        regs = modbus.read_holding_registers(register_addr=0x0010, quantity=3)
+        low, high, counts = regs[0], regs[1], regs[2]
+        # 32-bit value, low word first, in 0.1 W steps
+        rated_power = (((high << 16) | low) & 0xFFFFFFFF) * 0.1
+        # The counts are only meaningful once the register is populated
+        mppts = (counts & 0x0F00) >> 8 if counts >= 0x0101 else None
+        phases = counts & 0x000F if counts >= 0x0101 else None
+        _LOGGER.debug(
+            "Device capabilities: %s W, %s MPPTs, %s phases",
+            rated_power,
+            mppts,
+            phases,
+        )
+        return DeviceCapabilities(
+            rated_power=rated_power or None, mppts=mppts, phases=phases
+        )
+    except Exception as e:
+        _LOGGER.debug("Device capability registers unavailable: %s", e)
+        return DeviceCapabilities()
 
 
 class InverterData:

@@ -92,6 +92,55 @@ async def test_selected_variant_is_stored_as_int(hass):
     assert result["data"][CONF_MOD] == 2
 
 
+async def test_variant_is_detected_from_rated_power(hass):
+    """A 10 kW inverter gets variant 2 without the user choosing it."""
+    from custom_components.deye_inverter.InverterData import DeviceCapabilities
+
+    with patch(
+        "custom_components.deye_inverter.config_flow.test_connection",
+        return_value=DeviceCapabilities(rated_power=10000.0, mppts=3, phases=1),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": "user"},
+            data={**USER_INPUT, CONF_MOD: "auto"},
+        )
+
+    assert result["type"] == "create_entry"
+    assert result["data"][CONF_MOD] == 2
+
+
+async def test_detection_never_moves_a_small_inverter(hass):
+    """Below the threshold, detection keeps the documented scaling."""
+    from custom_components.deye_inverter.InverterData import DeviceCapabilities
+
+    with patch(
+        "custom_components.deye_inverter.config_flow.test_connection",
+        return_value=DeviceCapabilities(rated_power=5000.0, mppts=2, phases=1),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": "user"},
+            data={**USER_INPUT, CONF_MOD: "auto"},
+        )
+
+    assert result["data"][CONF_MOD] == DEFAULT_MOD
+
+
+async def test_options_flow_offers_only_concrete_variants(hass):
+    """Detection happens at setup, so the options flow has no auto choice."""
+    with patch("custom_components.deye_inverter.config_flow.test_connection"):
+        created = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": "user"}, data=USER_INPUT
+        )
+    entry = hass.config_entries.async_get_entry(created["result"].entry_id)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    options = result["data_schema"].schema[CONF_MOD].config["options"]
+
+    assert options == ["0", "1", "2"]
+
+
 async def test_options_flow_changes_the_variant(hass):
     """The variant can be changed after setup, without re-adding the entry."""
     with patch("custom_components.deye_inverter.config_flow.test_connection"):

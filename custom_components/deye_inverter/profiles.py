@@ -15,7 +15,11 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Dict, List, Tuple, Union
 
-from .const import DEFAULT_MOD, MOD_VARIANTS
+from .const import (
+    DEFAULT_MOD,
+    MOD_VARIANTS,
+    TEN_WATT_UNITS_FROM_RATED_POWER,
+)
 from .InverterDataParser import (
     _build_enum_mappings,
     _DEFINITIONS,
@@ -34,6 +38,24 @@ class Profile:
     mod: int
     definitions: Definitions
     enum_mappings: Dict[Tuple[int, str], Dict[int, str]]
+
+
+def suggest_mod(rated_power: Any) -> int:
+    """Pick the variant a rated power implies.
+
+    The 10 kW and larger models of this family report load, grid and CT power
+    in 10 W units and battery current in 0.1 A (variant 2); the smaller ones
+    follow the documentation (variant 0). An unreadable or implausible rated
+    power keeps the documented scaling, so a failed detection can never move
+    an installation off it.
+    """
+    try:
+        watts = float(rated_power)
+    except (TypeError, ValueError):
+        return DEFAULT_MOD
+    if watts >= TEN_WATT_UNITS_FROM_RATED_POWER:
+        return 2
+    return DEFAULT_MOD
 
 
 def normalize_mod(value: Any) -> int:

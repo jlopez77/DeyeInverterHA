@@ -46,6 +46,13 @@ def iter_sections(
     return []
 
 
+def _as_int(value: Any) -> int:
+    """Accept either 4096 or "0x1000", as the register lists do."""
+    if isinstance(value, str):
+        return int(value, 16)
+    return int(value)
+
+
 def select_variant(value: Any, mod: int) -> Any:
     """Pick the entry a scaling variant uses from a per-variant list.
 
@@ -203,6 +210,7 @@ def parse_raw(
         "Total Grid Production",
         "Total Battery Charge",
         "Total Battery Discharge",
+        "Device Rated Power",
     }
 
     definitions = _DEFINITIONS if profile is None else profile.definitions
@@ -230,10 +238,16 @@ def parse_raw(
                     if idx is not None:
                         indices.append(idx)
 
+                # A register missing from the list (short read, or a block the
+                # caller never read) must drop the metric: combining only part
+                # of a multi-register value would report a plausible wrong
+                # number instead of nothing.
+                if len(indices) != len(registers):
+                    continue
                 values = [raw[i] for i in indices if 0 <= i < len(raw)]
                 # None marks an optional block that could not be read
                 block = [v for v in values if v is not None]
-                if not block or len(block) != len(values):
+                if not block or len(block) != len(indices):
                     continue
 
                 # Rule 5: ASCII string
@@ -257,6 +271,15 @@ def parse_raw(
 
                 reverse = title in REVERSED_FIELDS
                 raw_int = combine_registers(block, signed=signed, reverse=reverse)
+
+                # Some registers pack several values into one word (0x0012
+                # carries the MPPT count and the phase count)
+                mask = item.get("mask")
+                if mask is not None:
+                    raw_int &= _as_int(mask)
+                shift = item.get("shift")
+                if shift:
+                    raw_int >>= _as_int(shift)
 
                 # Custom logic overrides
                 reg_key = int(registers[0], 16)

@@ -60,7 +60,7 @@ You will be asked for:
 - Port: Modbus TCP port (default: 8899)
 - Serial Number: The datalogger’s serial number (something like 17XXXXXX)
 - Installed Power (kW): Used for the *Production* (%) sensor
-- Power scaling variant: See [Power scaling variant](#power-scaling-variant) below — leave the default unless your power readings are ten times too low
+- Power scaling variant: See [Power scaling variant](#power-scaling-variant) below — leave it on *Detect automatically*
 
 The connection is tested before the entry is created — if the inverter is not
 reachable (wrong host/port/serial, or another client is holding the datalogger's
@@ -83,6 +83,18 @@ protocol identifies which behaviour a given unit has, so you select it:
 
 Every other metric — PV, inverter and total power, voltages, energy counters,
 temperatures — is identical across variants.
+
+**Detection.** The default choice, *Detect automatically*, reads the rated
+power the inverter reports (registers `0x0010`–`0x0011`) when the entry is
+created: 10 kW or more selects variant 2, anything less keeps variant 0. What
+gets stored is always the concrete variant, so you can see and change it
+afterwards. Inverters that do not expose that register keep variant 0, and the
+detected properties also appear as diagnostic entities (*Device Rated Power*,
+*Device MPPTs*, *Device Phases*).
+
+The threshold is inferred from hardware, not from the protocol documentation,
+so verify it once — and note that variant 1 is never auto-selected, since
+nothing in the device distinguishes it from variant 2.
 
 **How to tell which one you need.** With the inverter running and a known load
 on, check that the instantaneous balance adds up:

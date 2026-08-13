@@ -596,6 +596,50 @@
         "unit": "º"
       },
       {
+        "titleZH": "额定功率",
+        "titleEN": "Device Rated Power",
+        "registers": [
+          "0x0010",
+          "0x0011"
+        ],
+        "interactionType": 1,
+        "parserRule": 3,
+        "inputRanges": [],
+        "ratio": 0.1,
+        "signed": false,
+        "diagnostic": true,
+        "unit": "W"
+      },
+      {
+        "titleZH": "MPPT路数",
+        "titleEN": "Device MPPTs",
+        "registers": [
+          "0x0012"
+        ],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 1,
+        "signed": false,
+        "mask": "0x0F00",
+        "shift": 8,
+        "unit": ""
+      },
+      {
+        "titleZH": "相数",
+        "titleEN": "Device Phases",
+        "registers": [
+          "0x0012"
+        ],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 1,
+        "signed": false,
+        "mask": "0x000F",
+        "unit": ""
+      },
+      {
         "titleZH": "逆变器ID",
         "titleEN": "Inverter ID",
         "registers": ["0x0003","0x0004","0x0005","0x0006","0x0007"],
