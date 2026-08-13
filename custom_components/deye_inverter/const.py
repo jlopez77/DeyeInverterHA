@@ -25,7 +25,7 @@ DEFAULT_MOD = 0
 # best-effort (some devices may not expose them). Order defines the layout of
 # the flat register list passed to the parser, so only append new blocks.
 CORE_REGISTER_BLOCKS = [
-    (0x003B, 0x0070),  # daily/total counters, temperatures, alerts
+    (0x003B, 0x0074),  # counters, temperatures, alerts, PV1-PV4 voltage/current
     (0x0096, 0x00C3),  # grid, battery, load, PV real-time values
 ]
 OPTIONAL_REGISTER_BLOCKS = [

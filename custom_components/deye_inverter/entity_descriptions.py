@@ -83,13 +83,28 @@ def _registers_in_read_range(registers: Sequence[str]) -> bool:
     return all(any(start <= r <= end for start, end in REGISTER_BLOCKS) for r in regs)
 
 
+def _mppt_available(item: Dict[str, Any], mppts: Optional[int]) -> bool:
+    """True unless the item belongs to an MPPT this inverter does not have."""
+    required = item.get("mppt")
+    if required is None or mppts is None:
+        # Unknown MPPT count: keep the metric rather than hide real data
+        return True
+    try:
+        return int(required) <= int(mppts)
+    except (TypeError, ValueError):
+        return True
+
+
 def build_descriptions(
     profile: Optional[Profile] = None,
+    mppts: Optional[int] = None,
 ) -> List[DeyeSensorDescription]:
     """Build one sensor description per usable DYRealTime.txt item.
 
     Entity metadata is variant-independent (only ratios differ), so the
     profile is accepted for consistency and future per-variant metrics.
+    Items tied to an MPPT the inverter does not have are skipped, so a
+    2-string inverter gets no PV3/PV4 entities stuck at zero.
     """
     definitions = profile.definitions if isinstance(profile, Profile) else _DEFINITIONS
     sections: Sequence[Dict[str, Any]] = iter_sections(definitions)
@@ -103,6 +118,8 @@ def build_descriptions(
             if not title or title in seen:
                 continue
             if not _registers_in_read_range(item.get("registers", [])):
+                continue
+            if not _mppt_available(item, mppts):
                 continue
             seen.add(title)
 

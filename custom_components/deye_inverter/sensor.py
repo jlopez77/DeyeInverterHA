@@ -21,6 +21,42 @@ _LOGGER = logging.getLogger(__name__)
 
 ATTRIBUTION = "Data provided by Deye inverter via Modbus TCP"
 
+# Highest string count the definitions cover
+MAX_PV_INPUTS = 4
+
+
+def total_pv_power(data: Optional[dict[str, Any]]) -> Optional[float]:
+    """Sum the PV power of every string the inverter reports.
+
+    Inverters with a third or fourth MPPT would otherwise have part of
+    their array missing from the aggregates. A value that is present but
+    unusable makes the total unknown rather than silently too low.
+    """
+    total = 0.0
+    for n in range(1, MAX_PV_INPUTS + 1):
+        value = (data or {}).get(f"PV{n} Power")
+        if value is None:
+            continue
+        try:
+            total += float(value)
+        except (TypeError, ValueError):
+            return None
+    return total
+
+
+def _detected_mppts(coordinator: DeyeDataUpdateCoordinator) -> Optional[int]:
+    """The MPPT count the inverter reported on the first refresh, if any."""
+    data = getattr(coordinator, "data", None)
+    value = data.get("Device MPPTs") if isinstance(data, dict) else None
+    if not isinstance(value, (int, float, str)):
+        return None
+    try:
+        mppts = int(float(value))
+    except (TypeError, ValueError):
+        return None
+    # 0 means the register is there but carries nothing useful
+    return mppts if 1 <= mppts <= MAX_PV_INPUTS else None
+
 
 def _inverter_device_info(coordinator: DeyeDataUpdateCoordinator) -> DeviceInfo:
     """Device info shared by all entities of one inverter."""
@@ -44,7 +80,9 @@ async def async_setup_entry(
         entities.append(DeyeProductionPercentSensor(coordinator))
     entities.extend(
         DeyeMetricSensor(coordinator, description)
-        for description in build_descriptions(getattr(coordinator, "profile", None))
+        for description in build_descriptions(
+            getattr(coordinator, "profile", None), _detected_mppts(coordinator)
+        )
     )
     async_add_entities(entities, update_before_add=False)
 
@@ -70,12 +108,9 @@ class DeyeInverterSensor(CoordinatorEntity[DeyeDataUpdateCoordinator], SensorEnt
 
     @property
     def native_value(self) -> float:
-        """Return the sum of PV1 and PV2 power as the main sensor value."""
-        data = self.coordinator.data
-        try:
-            return float(data.get("PV1 Power", 0.0)) + float(data.get("PV2 Power", 0.0))
-        except (TypeError, ValueError):
-            return 0.0
+        """Return the total PV power across every string."""
+        total = total_pv_power(self.coordinator.data)
+        return 0.0 if total is None else total
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -107,7 +142,7 @@ class DeyeProductionPercentSensor(
 
     @property
     def native_value(self) -> Optional[float]:
-        """Return PV1+PV2 power relative to the installed power in kW."""
+        """Return total PV power relative to the installed power in kW."""
         installed_kw = getattr(self.coordinator, "installed_power", 0)
         try:
             installed_w = float(installed_kw) * 1000
@@ -116,12 +151,8 @@ class DeyeProductionPercentSensor(
         if installed_w <= 0:
             return None
 
-        data = self.coordinator.data or {}
-        try:
-            pv_power = float(data.get("PV1 Power", 0.0)) + float(
-                data.get("PV2 Power", 0.0)
-            )
-        except (TypeError, ValueError):
+        pv_power = total_pv_power(self.coordinator.data)
+        if pv_power is None:
             return None
         return round(pv_power / installed_w * 100, 1)
 

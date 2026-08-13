@@ -118,10 +118,23 @@ rewritten — remove the affected statistics if the history matters to you.
 All entities are grouped under one **Deye Inverter** device.
 
 ### Aggregate Sensor
-`sensor.deye_inverter` — total inverter PV production (PV1 + PV2), kept for backward compatibility.
+*Power* — total inverter PV production across every string, kept for backward
+compatibility. Its unique ID is unchanged, so installations created before the
+per-metric entities keep their original `sensor.deye_inverter` entity ID and
+history; new installations name it `sensor.deye_inverter_<serial>_power`.
+
+> **Changed:** this used to sum PV1 + PV2 only, so inverters with a third or
+> fourth MPPT under-reported their array. It now covers every string the
+> inverter reports, which means the value steps up on those models.
+
+### PV Strings
+PV1 and PV2 are always present. *PV3* and *PV4* voltage, current and power
+appear only when the inverter reports that many MPPTs (see *Device MPPTs*), so
+a two-string inverter gets no entities stuck at zero. If the inverter does not
+expose its MPPT count, all strings are created.
 
 ### Production Sensor
-*Production* — current PV output as a percentage of the installed power you configured (e.g. 800 W of 5 kW → 16 %).
+*Production* — current PV output as a percentage of the installed power you configured (e.g. 800 W of 5 kW → 16 %). Uses the same all-string total as the aggregate sensor.
 
 > **Breaking change:** this sensor no longer exposes the inverter metrics as
 > `extra_state_attributes`. Templates reading attributes from it must switch to

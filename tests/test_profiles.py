@@ -2,7 +2,11 @@
 
 import pytest
 
-from custom_components.deye_inverter.const import DEFAULT_MOD, MOD_VARIANTS
+from custom_components.deye_inverter.const import (
+    DEFAULT_MOD,
+    MOD_VARIANTS,
+    REGISTER_BLOCKS,
+)
 from custom_components.deye_inverter.entity_descriptions import build_descriptions
 from custom_components.deye_inverter.InverterDataParser import (
     _RAW_DEFINITIONS,
@@ -18,7 +22,7 @@ from custom_components.deye_inverter.profiles import (
     normalize_mod,
 )
 
-RAW_LEN = 117
+RAW_LEN = sum(end - start + 1 for start, end in REGISTER_BLOCKS)
 
 
 def _raw_sample():
