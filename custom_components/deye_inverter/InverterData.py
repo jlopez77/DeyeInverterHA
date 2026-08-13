@@ -21,6 +21,24 @@ class ModbusReadError(Exception):
     """Raised when reading registers from the inverter fails."""
 
 
+def _block_report(
+    start: int, end: int, regs: Optional[List[int]], error: Optional[str] = None
+) -> Dict[str, Any]:
+    """Describe one block read, for the diagnostics download."""
+    report: Dict[str, Any] = {
+        "range": f"0x{start:04X}-0x{end:04X}",
+        "expected": end - start + 1,
+        "received": len(regs) if regs is not None else 0,
+        "ok": regs is not None,
+    }
+    if error is not None:
+        report["error"] = error
+    if regs is not None:
+        report["registers"] = {f"0x{start + i:04X}": v for i, v in enumerate(regs)}
+        report["hex"] = " ".join(f"{v:04X}" for v in regs)
+    return report
+
+
 @dataclass(frozen=True)
 class DeviceCapabilities:
     """What the inverter reports about itself, when it reports it."""
@@ -106,6 +124,10 @@ class InverterData:
         self._profile = get_profile(mod)
         self._error_count = 0
         self._max_errors = 5
+        # Kept for the diagnostics download: the last registers read, and how
+        # each block fared
+        self.last_raw: List[Optional[int]] = []
+        self.last_blocks: List[Dict[str, Any]] = []
 
         try:
             self._modbus = PySolarmanV5(
@@ -127,11 +149,20 @@ class InverterData:
         loop = asyncio.get_running_loop()
 
         def read_block(addr: int, length: int) -> list[int]:
-            return self._modbus.read_holding_registers(
+            regs = self._modbus.read_holding_registers(
                 register_addr=addr, quantity=length
             )
+            # A short answer would shift every later register in the flat
+            # list, quietly turning one metric's value into another's
+            if len(regs) != length:
+                raise ModbusReadError(
+                    f"Block 0x{addr:04X}: asked for {length} registers, "
+                    f"got {len(regs)}"
+                )
+            return regs
 
         raw: List[Optional[int]] = []
+        blocks: List[Dict[str, Any]] = []
 
         try:
             for start, end in CORE_REGISTER_BLOCKS:
@@ -139,6 +170,7 @@ class InverterData:
                 regs = await loop.run_in_executor(None, read_block, start, length)
                 _LOGGER.debug("Regs block 0x%04X (%d): %s", start, length, regs)
                 raw.extend(regs)
+                blocks.append(_block_report(start, end, regs))
                 await asyncio.sleep(0.1)
             self._error_count = 0  # Reset on success
         except Exception as e:
@@ -160,14 +192,19 @@ class InverterData:
                 regs = await loop.run_in_executor(None, read_block, start, length)
                 _LOGGER.debug("Regs block 0x%04X (%d): %s", start, length, regs)
                 raw.extend(regs)
+                blocks.append(_block_report(start, end, regs))
             except Exception as e:
                 _LOGGER.debug(
                     "Optional register block 0x%04X unavailable: %s", start, e
                 )
                 raw.extend([None] * length)
+                blocks.append(_block_report(start, end, None, error=str(e)))
             await asyncio.sleep(0.1)
 
         _LOGGER.debug("RAW registers (total %d): %s", len(raw), raw)
+
+        self.last_raw = raw
+        self.last_blocks = blocks
 
         return parse_raw(raw, self._profile)
 

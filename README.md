@@ -202,6 +202,23 @@ Make sure files are correctly placed under `config/custom_components/deye_invert
 
 Restart Home Assistant
 
+### Reporting a wrong value
+
+Register maps differ between models in ways the protocol documentation does not
+describe, so "what does this inverter actually put in that register" is usually
+the only question that matters. Answer it in one file:
+
+**Settings → Devices & Services → Deye Inverter → ⋮ → Download diagnostics**
+
+The download contains every register block exactly as read — address by
+address, plus a hex dump — next to the values parsed from them, along with the
+scaling variant in use and which blocks the inverter refused. Host, serial
+number and *Inverter ID* are redacted, so it is safe to attach to an issue.
+
+If a metric is missing entirely rather than wrong, check the `blocks` section:
+a block with `"ok": false` means the inverter rejected that range, and every
+metric living in it is dropped for that cycle.
+
 ## Contributing
 This integration is under active development and contributions are welcome. If you encounter issues or have suggestions:
 

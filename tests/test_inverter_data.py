@@ -84,7 +84,9 @@ async def test_fetch_data_logs_error_and_raises(caplog):
 async def test_fetch_data_success_returns_parsed():
     """Test that fetch_data returns parsed result correctly."""
     inverter = InverterData(host="localhost", port=8899, serial="1")
-    inverter._modbus.read_holding_registers = MagicMock(return_value=[0] * 100)
+    inverter._modbus.read_holding_registers = MagicMock(
+        side_effect=lambda register_addr, quantity: [0] * quantity
+    )
 
     result = await inverter.fetch_data()
     assert isinstance(result, dict)
@@ -130,7 +132,9 @@ async def test_fetch_data_optional_blocks_best_effort():
 async def test_fetch_data_without_hass_or_entry():
     """Ensure fetch_data works standalone without hass/config_entry (no reload logic)."""
     inverter = InverterData(host="localhost", port=8899, serial="1")
-    inverter._modbus.read_holding_registers = MagicMock(return_value=[0] * 100)
+    inverter._modbus.read_holding_registers = MagicMock(
+        side_effect=lambda register_addr, quantity: [0] * quantity
+    )
 
     result = await inverter.fetch_data()
     assert isinstance(result, dict)
@@ -150,7 +154,9 @@ async def test_fetch_data_success_no_reload_trigger():
         hass=hass,
         config_entry=config_entry,
     )
-    inverter._modbus.read_holding_registers = MagicMock(return_value=[0] * 100)
+    inverter._modbus.read_holding_registers = MagicMock(
+        side_effect=lambda register_addr, quantity: [0] * quantity
+    )
 
     result = await inverter.fetch_data()
 
