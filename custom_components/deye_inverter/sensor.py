@@ -44,7 +44,7 @@ async def async_setup_entry(
         entities.append(DeyeProductionPercentSensor(coordinator))
     entities.extend(
         DeyeMetricSensor(coordinator, description)
-        for description in build_descriptions()
+        for description in build_descriptions(getattr(coordinator, "profile", None))
     )
     async_add_entities(entities, update_before_add=False)
 

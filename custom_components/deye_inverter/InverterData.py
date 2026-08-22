@@ -6,10 +6,12 @@ from pysolarmanv5.pysolarmanv5 import PySolarmanV5, NoSocketAvailableError
 
 from .const import (
     CORE_REGISTER_BLOCKS,
+    DEFAULT_MOD,
     DEFAULT_MODBUS_TIMEOUT,
     OPTIONAL_REGISTER_BLOCKS,
 )
 from .InverterDataParser import parse_raw
+from .profiles import get_profile
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,12 +59,14 @@ class InverterData:
         serial: str = "1",
         hass=None,
         config_entry=None,
+        mod: int = DEFAULT_MOD,
     ):
         self._host = host
         self._port = port
         self._serial = int(serial)
         self._hass = hass
         self._config_entry = config_entry
+        self._profile = get_profile(mod)
         self._error_count = 0
         self._max_errors = 5
 
@@ -128,7 +132,7 @@ class InverterData:
 
         _LOGGER.debug("RAW registers (total %d): %s", len(raw), raw)
 
-        return parse_raw(raw)
+        return parse_raw(raw, self._profile)
 
     async def _trigger_reload(self):
         if not self._hass or not self._config_entry:

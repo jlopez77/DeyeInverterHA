@@ -6,6 +6,8 @@ from custom_components.deye_inverter.const import (
     CONF_PORT,
     CONF_SERIAL,
     CONF_INSTALLED_POWER,
+    CONF_MOD,
+    DEFAULT_MOD,
 )
 
 USER_INPUT = {
@@ -40,7 +42,8 @@ async def test_create_entry_from_user_input(hass):
 
     assert result["type"] == "create_entry"
     assert result["title"] == "123456789"
-    assert result["data"] == USER_INPUT
+    # The scaling variant defaults to the documented one and is stored as int
+    assert result["data"] == {**USER_INPUT, CONF_MOD: DEFAULT_MOD}
     mock_test.assert_called_once_with("192.168.1.100", 8899, "123456789")
 
 
@@ -74,6 +77,56 @@ async def test_invalid_serial_shows_error(hass):
     assert result["type"] == "form"
     assert result["errors"] == {CONF_SERIAL: "invalid_serial"}
     mock_test.assert_not_called()
+
+
+async def test_selected_variant_is_stored_as_int(hass):
+    """The selector hands back a string; the entry keeps an int."""
+    with patch("custom_components.deye_inverter.config_flow.test_connection"):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": "user"},
+            data={**USER_INPUT, CONF_MOD: "2"},
+        )
+
+    assert result["type"] == "create_entry"
+    assert result["data"][CONF_MOD] == 2
+
+
+async def test_options_flow_changes_the_variant(hass):
+    """The variant can be changed after setup, without re-adding the entry."""
+    with patch("custom_components.deye_inverter.config_flow.test_connection"):
+        created = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": "user"}, data=USER_INPUT
+        )
+    entry = hass.config_entries.async_get_entry(created["result"].entry_id)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == "form"
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={CONF_MOD: "2"}
+    )
+
+    assert result["type"] == "create_entry"
+    assert entry.options[CONF_MOD] == 2
+    # The connection details stay untouched
+    assert entry.data[CONF_HOST] == USER_INPUT[CONF_HOST]
+
+
+async def test_options_flow_defaults_to_the_configured_variant(hass):
+    """The form opens on the variant currently in use."""
+    with patch("custom_components.deye_inverter.config_flow.test_connection"):
+        created = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": "user"},
+            data={**USER_INPUT, CONF_MOD: "2"},
+        )
+    entry = hass.config_entries.async_get_entry(created["result"].entry_id)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    assert result["data_schema"]({})[CONF_MOD] == "2"
 
 
 async def test_duplicate_serial_aborts(hass):

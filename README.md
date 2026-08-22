@@ -60,10 +60,46 @@ You will be asked for:
 - Port: Modbus TCP port (default: 8899)
 - Serial Number: The datalogger’s serial number (something like 17XXXXXX)
 - Installed Power (kW): Used for the *Production* (%) sensor
+- Power scaling variant: See [Power scaling variant](#power-scaling-variant) below — leave the default unless your power readings are ten times too low
 
 The connection is tested before the entry is created — if the inverter is not
 reachable (wrong host/port/serial, or another client is holding the datalogger's
 single TCP slot) the form shows an error instead of creating a broken entry.
+
+### Power scaling variant
+
+The single-phase hybrid family shares one register map, but not every
+generation reports the same units. The protocol documentation describes power
+in watts and battery current in 0.01 A steps, which is what the smaller
+inverters do — but the 10–12 kW models report load, grid and CT power in units
+of **10 W**, and some of them battery current in **0.1 A**. Nothing in the
+protocol identifies which behaviour a given unit has, so you select it:
+
+| Variant | Load / grid / CT power | Battery current | Typical models |
+|---------|------------------------|-----------------|----------------|
+| **0** (default) | as documented (× 1) | 0.01 A | single-phase hybrids up to ~8 kW |
+| **1** | × 10 | 0.01 A | some 10 kW+ units |
+| **2** | × 10 | 0.1 A | SUN-10K/12K-SG02LP1 and similar |
+
+Every other metric — PV, inverter and total power, voltages, energy counters,
+temperatures — is identical across variants.
+
+**How to tell which one you need.** With the inverter running and a known load
+on, check that the instantaneous balance adds up:
+
+```
+PV output ≈ Total Load Power + Total Grid Power + Battery Power
+```
+
+On the wrong variant the load and grid figures are off by exactly 10×, so the
+balance misses by roughly 90 % and *Total Load Power* reads far below what your
+meter says. On variant 2 you can also verify that *Battery Voltage* ×
+*Battery Current* reproduces *Battery Power*.
+
+Change it any time under **Settings → Devices & Services → Deye Inverter →
+Configure**; the integration reloads and applies the new scaling immediately.
+Energy-dashboard statistics already recorded with the wrong variant are not
+rewritten — remove the affected statistics if the history matters to you.
 
 ## Entities
 

@@ -23,7 +23,8 @@ from homeassistant.const import (
 from homeassistant.util import slugify
 
 from .const import REGISTER_BLOCKS
-from .InverterDataParser import _DEFINITIONS
+from .InverterDataParser import _DEFINITIONS, iter_sections
+from .profiles import Profile
 
 _UNIT_METADATA: Dict[str, Dict[str, Any]] = {
     "w": {
@@ -82,13 +83,16 @@ def _registers_in_read_range(registers: Sequence[str]) -> bool:
     return all(any(start <= r <= end for start, end in REGISTER_BLOCKS) for r in regs)
 
 
-def build_descriptions() -> List[DeyeSensorDescription]:
-    """Build one sensor description per usable DYRealTime.txt item."""
-    sections: Sequence[Dict[str, Any]] = (
-        list(_DEFINITIONS.values())
-        if isinstance(_DEFINITIONS, dict)
-        else _DEFINITIONS  # type: ignore[assignment]
-    )
+def build_descriptions(
+    profile: Optional[Profile] = None,
+) -> List[DeyeSensorDescription]:
+    """Build one sensor description per usable DYRealTime.txt item.
+
+    Entity metadata is variant-independent (only ratios differ), so the
+    profile is accepted for consistency and future per-variant metrics.
+    """
+    definitions = profile.definitions if isinstance(profile, Profile) else _DEFINITIONS
+    sections: Sequence[Dict[str, Any]] = iter_sections(definitions)
 
     descriptions: List[DeyeSensorDescription] = []
     seen: set[str] = set()

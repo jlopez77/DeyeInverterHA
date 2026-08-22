@@ -9,6 +9,16 @@ CONF_HOST = "host"
 CONF_PORT = "port"
 CONF_SERIAL = "serial"
 CONF_INSTALLED_POWER = "installed_power"
+CONF_MOD = "mod"
+
+# Scaling variant of the inverter ("mod"), used as the index into the
+# per-variant ratio lists in DYRealTime.txt. The protocol documentation only
+# describes variant 0; the higher-power generations of the single-phase hybrid
+# family report power in units of 10 W (and, from variant 2, battery current
+# in 0.1 A). Naming and indices follow the community Solarman profile for the
+# SG0*LP1 family so values can be cross-referenced.
+MOD_VARIANTS = (0, 1, 2)
+DEFAULT_MOD = 0
 
 # Holding-register blocks read on every update, as (first, last) inclusive.
 # Core blocks must succeed or the whole read fails; optional blocks are read
