@@ -23,7 +23,8 @@ from homeassistant.const import (
 from homeassistant.util import slugify
 
 from .const import REGISTER_BLOCKS
-from .InverterDataParser import _DEFINITIONS
+from .InverterDataParser import _DEFINITIONS, iter_sections
+from .profiles import Profile
 
 _UNIT_METADATA: Dict[str, Dict[str, Any]] = {
     "w": {
@@ -82,13 +83,31 @@ def _registers_in_read_range(registers: Sequence[str]) -> bool:
     return all(any(start <= r <= end for start, end in REGISTER_BLOCKS) for r in regs)
 
 
-def build_descriptions() -> List[DeyeSensorDescription]:
-    """Build one sensor description per usable DYRealTime.txt item."""
-    sections: Sequence[Dict[str, Any]] = (
-        list(_DEFINITIONS.values())
-        if isinstance(_DEFINITIONS, dict)
-        else _DEFINITIONS  # type: ignore[assignment]
-    )
+def _mppt_available(item: Dict[str, Any], mppts: Optional[int]) -> bool:
+    """True unless the item belongs to an MPPT this inverter does not have."""
+    required = item.get("mppt")
+    if required is None or mppts is None:
+        # Unknown MPPT count: keep the metric rather than hide real data
+        return True
+    try:
+        return int(required) <= int(mppts)
+    except (TypeError, ValueError):
+        return True
+
+
+def build_descriptions(
+    profile: Optional[Profile] = None,
+    mppts: Optional[int] = None,
+) -> List[DeyeSensorDescription]:
+    """Build one sensor description per usable DYRealTime.txt item.
+
+    Entity metadata is variant-independent (only ratios differ), so the
+    profile is accepted for consistency and future per-variant metrics.
+    Items tied to an MPPT the inverter does not have are skipped, so a
+    2-string inverter gets no PV3/PV4 entities stuck at zero.
+    """
+    definitions = profile.definitions if isinstance(profile, Profile) else _DEFINITIONS
+    sections: Sequence[Dict[str, Any]] = iter_sections(definitions)
 
     descriptions: List[DeyeSensorDescription] = []
     seen: set[str] = set()
@@ -100,14 +119,19 @@ def build_descriptions() -> List[DeyeSensorDescription]:
                 continue
             if not _registers_in_read_range(item.get("registers", [])):
                 continue
+            if not _mppt_available(item, mppts):
+                continue
             seen.add(title)
 
             unit = str(item.get("unit") or "").strip().lower()
             meta = _UNIT_METADATA.get(unit)
 
-            # Unit-less metrics are statuses, device info, or bitfields
+            # Unit-less metrics are statuses, device info, or bitfields; items
+            # may also ask to be diagnostic while keeping their unit, for
+            # device properties that never change (rated power).
+            diagnostic = bool(item.get("diagnostic")) or meta is None
             category: Optional[EntityCategory] = (
-                EntityCategory.DIAGNOSTIC if meta is None else None
+                EntityCategory.DIAGNOSTIC if diagnostic else None
             )
 
             descriptions.append(
@@ -116,7 +140,12 @@ def build_descriptions() -> List[DeyeSensorDescription]:
                     name=title,
                     metric_title=title,
                     device_class=meta["device_class"] if meta else None,
-                    state_class=meta["state_class"] if meta else None,
+                    # Constant device properties are not worth recording
+                    state_class=(
+                        meta["state_class"]
+                        if meta and not item.get("diagnostic")
+                        else None
+                    ),
                     native_unit_of_measurement=meta["unit"] if meta else None,
                     entity_category=category,
                 )

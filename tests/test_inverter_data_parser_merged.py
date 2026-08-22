@@ -5,6 +5,16 @@
 import pytest
 import importlib
 from custom_components.deye_inverter import InverterDataParser as parser
+from custom_components.deye_inverter.const import REGISTER_BLOCKS
+from custom_components.deye_inverter.InverterDataParser import register_index
+
+# Derived, never hardcoded: the blocks read from the inverter define both the
+# length of the raw list and where each register lands in it
+RAW_LEN = sum(end - start + 1 for start, end in REGISTER_BLOCKS)
+
+
+def empty_raw():
+    return [0] * RAW_LEN
 
 # === Combine & status functions ===
 
@@ -122,8 +132,9 @@ def test_enum_mapping_unknown_value(monkeypatch):
             }
         ],
     )
-    parser._ENUM_MAPPINGS.clear()
-    parser._ENUM_MAPPINGS[(0x003B, "EnumField")] = {1: "OK"}
+    # Replace the mapping instead of clearing it in place: monkeypatch cannot
+    # undo a mutation, and the real mappings are shared with every profile.
+    monkeypatch.setattr(parser, "_ENUM_MAPPINGS", {(0x003B, "EnumField"): {1: "OK"}})
     result = parser.parse_raw([999])
     assert result["EnumField"] == "Unknown (999)"
 
@@ -370,7 +381,7 @@ def test_parse_raw_battery_status_positive(monkeypatch):
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs
     )
-    raw = [0] * 94 + [3]
+    raw = [0] * register_index(0x00BE) + [3]
     result = parse_raw(raw)
     assert result["Battery Status"].startswith("Discharge")
 
@@ -390,8 +401,7 @@ def test_parse_raw_gen_connected_status(monkeypatch):
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs
     )
-    offset = (0x0070 - 0x003B + 1) + (0x00A6 - 0x0096)
-    raw = [0] * offset + [0]
+    raw = [0] * register_index(0x00A6) + [0]
     result = parse_raw(raw)
     assert result["Gen-connected Status"] == "Off"
 
@@ -417,14 +427,17 @@ def test_parse_raw_enum_mapping(monkeypatch):
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs
     )
-    _ENUM_MAPPINGS.clear()
-    for item in fake_defs[0]["items"]:
-        reg = int(item["registers"][0], 16)
-        title = item["titleEN"]
-        mapping = {opt["key"]: opt["valueEN"] for opt in item["optionRanges"]}
-        _ENUM_MAPPINGS[(reg, title)] = mapping
-    raw = [0] * 117
-    raw[112] = 2  # 0x00F4 -> first register of the last read block
+    monkeypatch.setattr(
+        "custom_components.deye_inverter.InverterDataParser._ENUM_MAPPINGS",
+        {
+            (int(item["registers"][0], 16), item["titleEN"]): {
+                opt["key"]: opt["valueEN"] for opt in item["optionRanges"]
+            }
+            for item in fake_defs[0]["items"]
+        },
+    )
+    raw = empty_raw()
+    raw[register_index(0x00F4)] = 2
     result = parse_raw(raw)
     assert result["Mode Status"] == "Manual"
 
@@ -447,14 +460,18 @@ def test_parse_raw_work_mode_pair(monkeypatch):
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs
     )
-    _ENUM_MAPPINGS.clear()
-    _ENUM_MAPPINGS[(0x00F4, "Work Mode")] = {
-        0: "Selling First",
-        1: "Zero-Export to Load&Solar Sell",
-        2: "Zero-Export to Home&Solar Sell",
-        3: "Zero-Export to Load",
-        4: "Zero-Export to Home",
-    }
+    monkeypatch.setattr(
+        "custom_components.deye_inverter.InverterDataParser._ENUM_MAPPINGS",
+        {
+            (0x00F4, "Work Mode"): {
+                0: "Selling First",
+                1: "Zero-Export to Load&Solar Sell",
+                2: "Zero-Export to Home&Solar Sell",
+                3: "Zero-Export to Load",
+                4: "Zero-Export to Home",
+            }
+        },
+    )
 
     cases = [
         ((0, 0), "Selling First"),
@@ -465,9 +482,9 @@ def test_parse_raw_work_mode_pair(monkeypatch):
         ((9, 0), "Unknown (9/0)"),
     ]
     for (mode, sell), expected in cases:
-        raw = [0] * 117
-        raw[112] = mode  # 0x00F4
-        raw[115] = sell  # 0x00F7
+        raw = empty_raw()
+        raw[register_index(0x00F4)] = mode
+        raw[register_index(0x00F7)] = sell
         assert parse_raw(raw)["Work Mode"] == expected
 
 
@@ -515,14 +532,17 @@ def test_parse_raw_enum_unknown(monkeypatch):
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs
     )
-    _ENUM_MAPPINGS.clear()
-    for item in fake_defs[0]["items"]:
-        reg = int(item["registers"][0], 16)
-        title = item["titleEN"]
-        mapping = {opt["key"]: opt["valueEN"] for opt in item["optionRanges"]}
-        _ENUM_MAPPINGS[(reg, title)] = mapping
-    raw = [0] * 117
-    raw[112] = 999  # 0x00F4 -> first register of the last read block
+    monkeypatch.setattr(
+        "custom_components.deye_inverter.InverterDataParser._ENUM_MAPPINGS",
+        {
+            (int(item["registers"][0], 16), item["titleEN"]): {
+                opt["key"]: opt["valueEN"] for opt in item["optionRanges"]
+            }
+            for item in fake_defs[0]["items"]
+        },
+    )
+    raw = empty_raw()
+    raw[register_index(0x00F4)] = 999
     result = parse_raw(raw)
     assert result["Mode Status"] == "Unknown (999)"
 
@@ -941,8 +961,7 @@ def test_parse_enum_unknown(monkeypatch):
             }
         ],
     )
-    parser._ENUM_MAPPINGS.clear()
-    parser._ENUM_MAPPINGS[(0x003B, "EnumField")] = {1: "On"}
+    monkeypatch.setattr(parser, "_ENUM_MAPPINGS", {(0x003B, "EnumField"): {1: "On"}})
     result = parser.parse_raw([999])
     assert result["EnumField"] == "Unknown (999)"
 
@@ -1038,7 +1057,7 @@ def test_parse_skips_item_with_no_registers(monkeypatch):
 def test_power_register_scaling():
    from custom_components.deye_inverter.InverterDataParser import register_index
 
-   raw = [0] * 117
+   raw = empty_raw()
    raw[register_index(0x00B2)] = 301  # Total Load Power
    raw[register_index(0x00B0)] = 301  # Load L1 Power
    raw[register_index(0x00A9)] = 0x10000 - 432  # Total Grid Power, negative

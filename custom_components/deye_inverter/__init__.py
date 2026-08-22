@@ -6,7 +6,15 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, CONF_HOST, CONF_PORT, CONF_SERIAL, CONF_INSTALLED_POWER
+from .const import (
+    DOMAIN,
+    CONF_HOST,
+    CONF_PORT,
+    CONF_SERIAL,
+    CONF_INSTALLED_POWER,
+    CONF_MOD,
+    DEFAULT_MOD,
+)
 from .coordinator import DeyeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,6 +35,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                 CONF_PORT: conf[CONF_PORT],
                 CONF_SERIAL: conf[CONF_SERIAL],
                 CONF_INSTALLED_POWER: conf[CONF_INSTALLED_POWER],
+                CONF_MOD: conf.get(CONF_MOD, DEFAULT_MOD),
             },
         )
     )
@@ -46,10 +55,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
+    # A changed scaling variant needs a reload: it is baked into the profile
+    # the coordinator and its entities were built with.
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
     # Forward the configuration to the sensor platform
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
     return True
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload the entry after its options changed."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
