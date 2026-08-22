@@ -7,7 +7,7 @@ from custom_components.deye_inverter import (
     async_unload_entry,
     async_setup,
 )
-from custom_components.deye_inverter.const import DOMAIN
+from custom_components.deye_inverter.const import DOMAIN, CONF_MOD, DEFAULT_MOD
 
 
 @pytest.mark.asyncio
@@ -87,5 +87,6 @@ async def test_async_setup_import_creates_flow():
     hass.config_entries.flow.async_init.assert_awaited_once_with(
         DOMAIN,
         context={"source": "import"},
-        data=config[DOMAIN],
+        # YAML config may omit the scaling variant; the default is filled in
+        data={**config[DOMAIN], CONF_MOD: DEFAULT_MOD},
     )

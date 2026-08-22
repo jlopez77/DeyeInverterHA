@@ -141,3 +141,58 @@ async def test_unreachable_inverter_with_cache(
 
     result = await coordinator._async_update_data()
     assert result == {"PV1 Power": 500}
+
+
+@patch("custom_components.deye_inverter.coordinator.InverterData")
+@pytest.mark.asyncio
+async def test_configured_variant_reaches_the_inverter_client(
+    mock_inverter_class, mock_hass, mock_config_entry
+):
+    """The variant stored in the entry is what the client parses with."""
+    mock_config_entry.data = {**mock_config_entry.data, "mod": 2}
+
+    coordinator = DeyeDataUpdateCoordinator(
+        hass=mock_hass,
+        config_entry=mock_config_entry,
+        installed_power=5000,
+    )
+    coordinator._create_inverter()
+
+    assert coordinator.mod == 2
+    assert coordinator.profile.mod == 2
+    assert mock_inverter_class.call_args.kwargs["mod"] == 2
+
+
+@patch("custom_components.deye_inverter.coordinator.InverterData")
+@pytest.mark.asyncio
+async def test_options_override_the_variant_from_data(
+    mock_inverter_class, mock_hass, mock_config_entry
+):
+    """A variant changed through the options flow wins over setup data."""
+    mock_config_entry.data = {**mock_config_entry.data, "mod": 2}
+    mock_config_entry.options = {"mod": 0}
+
+    coordinator = DeyeDataUpdateCoordinator(
+        hass=mock_hass,
+        config_entry=mock_config_entry,
+        installed_power=5000,
+    )
+
+    assert coordinator.mod == 0
+
+
+@patch("custom_components.deye_inverter.coordinator.InverterData")
+@pytest.mark.asyncio
+async def test_unknown_variant_falls_back_to_default(
+    mock_inverter_class, mock_hass, mock_config_entry
+):
+    """A junk variant in the entry must not break setup."""
+    mock_config_entry.data = {**mock_config_entry.data, "mod": "nonsense"}
+
+    coordinator = DeyeDataUpdateCoordinator(
+        hass=mock_hass,
+        config_entry=mock_config_entry,
+        installed_power=5000,
+    )
+
+    assert coordinator.mod == 0

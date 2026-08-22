@@ -8,8 +8,9 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from pysolarmanv5.pysolarmanv5 import NoSocketAvailableError
 
-from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
+from .const import CONF_MOD, DEFAULT_MOD, DOMAIN, DEFAULT_SCAN_INTERVAL
 from .InverterData import InverterData
+from .profiles import Profile, get_profile, normalize_mod
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +35,12 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         self._host = config_entry.data["host"]
         self._port = config_entry.data.get("port", 8899)
         self.serial = config_entry.data["serial"]
+        # Options win over data: the variant can be changed after setup
+        options = getattr(config_entry, "options", None) or {}
+        self.mod = normalize_mod(
+            options.get(CONF_MOD, config_entry.data.get(CONF_MOD, DEFAULT_MOD))
+        )
+        self.profile: Profile = get_profile(self.mod)
         self._last_known_data: Dict[str, Any] = {}
         # Created lazily in _async_update_data: the constructor opens a
         # socket, which must not run in the event loop.
@@ -56,6 +63,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             serial=self.serial,
             hass=self.hass,
             config_entry=self.config_entry,
+            mod=self.mod,
         )
 
     async def _async_update_data(self) -> Dict[str, Any]:

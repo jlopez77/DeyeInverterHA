@@ -122,8 +122,9 @@ def test_enum_mapping_unknown_value(monkeypatch):
             }
         ],
     )
-    parser._ENUM_MAPPINGS.clear()
-    parser._ENUM_MAPPINGS[(0x003B, "EnumField")] = {1: "OK"}
+    # Replace the mapping instead of clearing it in place: monkeypatch cannot
+    # undo a mutation, and the real mappings are shared with every profile.
+    monkeypatch.setattr(parser, "_ENUM_MAPPINGS", {(0x003B, "EnumField"): {1: "OK"}})
     result = parser.parse_raw([999])
     assert result["EnumField"] == "Unknown (999)"
 
@@ -417,12 +418,15 @@ def test_parse_raw_enum_mapping(monkeypatch):
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs
     )
-    _ENUM_MAPPINGS.clear()
-    for item in fake_defs[0]["items"]:
-        reg = int(item["registers"][0], 16)
-        title = item["titleEN"]
-        mapping = {opt["key"]: opt["valueEN"] for opt in item["optionRanges"]}
-        _ENUM_MAPPINGS[(reg, title)] = mapping
+    monkeypatch.setattr(
+        "custom_components.deye_inverter.InverterDataParser._ENUM_MAPPINGS",
+        {
+            (int(item["registers"][0], 16), item["titleEN"]): {
+                opt["key"]: opt["valueEN"] for opt in item["optionRanges"]
+            }
+            for item in fake_defs[0]["items"]
+        },
+    )
     raw = [0] * 117
     raw[112] = 2  # 0x00F4 -> first register of the last read block
     result = parse_raw(raw)
@@ -447,14 +451,18 @@ def test_parse_raw_work_mode_pair(monkeypatch):
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs
     )
-    _ENUM_MAPPINGS.clear()
-    _ENUM_MAPPINGS[(0x00F4, "Work Mode")] = {
-        0: "Selling First",
-        1: "Zero-Export to Load&Solar Sell",
-        2: "Zero-Export to Home&Solar Sell",
-        3: "Zero-Export to Load",
-        4: "Zero-Export to Home",
-    }
+    monkeypatch.setattr(
+        "custom_components.deye_inverter.InverterDataParser._ENUM_MAPPINGS",
+        {
+            (0x00F4, "Work Mode"): {
+                0: "Selling First",
+                1: "Zero-Export to Load&Solar Sell",
+                2: "Zero-Export to Home&Solar Sell",
+                3: "Zero-Export to Load",
+                4: "Zero-Export to Home",
+            }
+        },
+    )
 
     cases = [
         ((0, 0), "Selling First"),
@@ -515,12 +523,15 @@ def test_parse_raw_enum_unknown(monkeypatch):
     monkeypatch.setattr(
         "custom_components.deye_inverter.InverterDataParser._DEFINITIONS", fake_defs
     )
-    _ENUM_MAPPINGS.clear()
-    for item in fake_defs[0]["items"]:
-        reg = int(item["registers"][0], 16)
-        title = item["titleEN"]
-        mapping = {opt["key"]: opt["valueEN"] for opt in item["optionRanges"]}
-        _ENUM_MAPPINGS[(reg, title)] = mapping
+    monkeypatch.setattr(
+        "custom_components.deye_inverter.InverterDataParser._ENUM_MAPPINGS",
+        {
+            (int(item["registers"][0], 16), item["titleEN"]): {
+                opt["key"]: opt["valueEN"] for opt in item["optionRanges"]
+            }
+            for item in fake_defs[0]["items"]
+        },
+    )
     raw = [0] * 117
     raw[112] = 999  # 0x00F4 -> first register of the last read block
     result = parse_raw(raw)
@@ -941,8 +952,7 @@ def test_parse_enum_unknown(monkeypatch):
             }
         ],
     )
-    parser._ENUM_MAPPINGS.clear()
-    parser._ENUM_MAPPINGS[(0x003B, "EnumField")] = {1: "On"}
+    monkeypatch.setattr(parser, "_ENUM_MAPPINGS", {(0x003B, "EnumField"): {1: "On"}})
     result = parser.parse_raw([999])
     assert result["EnumField"] == "Unknown (999)"
 
