@@ -63,6 +63,84 @@
         "unit": "A"
       },
       {
+        "titleZH": "PV3功率",
+        "titleEN": "PV3 Power",
+        "registers": [
+          "0x00BC"
+        ],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 1,
+        "mppt": 3,
+        "unit": "W"
+      },
+      {
+        "titleZH": "PV4功率",
+        "titleEN": "PV4 Power",
+        "registers": [
+          "0x00BD"
+        ],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 1,
+        "mppt": 4,
+        "unit": "W"
+      },
+      {
+        "titleZH": "PV3电压",
+        "titleEN": "PV3 Voltage",
+        "registers": [
+          "0x0071"
+        ],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 0.1,
+        "mppt": 3,
+        "unit": "V"
+      },
+      {
+        "titleZH": "PV4电压",
+        "titleEN": "PV4 Voltage",
+        "registers": [
+          "0x0073"
+        ],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 0.1,
+        "mppt": 4,
+        "unit": "V"
+      },
+      {
+        "titleZH": "PV3电流",
+        "titleEN": "PV3 Current",
+        "registers": [
+          "0x0072"
+        ],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 0.1,
+        "mppt": 3,
+        "unit": "A"
+      },
+      {
+        "titleZH": "PV4电流",
+        "titleEN": "PV4 Current",
+        "registers": [
+          "0x0074"
+        ],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 0.1,
+        "mppt": 4,
+        "unit": "A"
+      },
+      {
         "titleZH": "日发电量",
         "titleEN": "Daily Production",
         "registers": ["0x006C"],
@@ -159,7 +237,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 0.01,
+        "ratio": [0.01, 0.01, 0.1],
         "unit": "A"
       },
       {
@@ -250,7 +328,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": [1, 10, 10],
         "unit": "W"
       },
       {
@@ -280,7 +358,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": [1, 10, 10],
         "unit": "W"
       },
       {
@@ -290,7 +368,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": [1, 10, 10],
         "unit": "W"
       },
       {
@@ -300,7 +378,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": [1, 10, 10],
         "unit": "W"
       },
       {
@@ -310,7 +388,7 @@
         "interactionType": 1,
         "parserRule": 2,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": [1, 10, 10],
         "unit": "W"
       },
       {
@@ -405,17 +483,17 @@
         "interactionType": 1,
         "parserRule": 1,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": [1, 10, 10],
         "unit": "W"
       },
       {
         "titleZH": "负载功率1",
         "titleEN": "Load L1 Power",
         "registers": ["0x00B0"],
-        "interactionType": 0.1,
+        "interactionType": 1,
         "parserRule": 1,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": [1, 10, 10],
         "unit": "W"
       },
       {
@@ -425,7 +503,7 @@
         "interactionType": 1,
         "parserRule": 1,
         "inputRanges": [],
-        "ratio": 1,
+        "ratio": [1, 10, 10],
         "unit": "W"
       },
       {
@@ -594,6 +672,50 @@
         "inputRanges": [],
         "ratio": 0.1,
         "unit": "º"
+      },
+      {
+        "titleZH": "额定功率",
+        "titleEN": "Device Rated Power",
+        "registers": [
+          "0x0010",
+          "0x0011"
+        ],
+        "interactionType": 1,
+        "parserRule": 3,
+        "inputRanges": [],
+        "ratio": 0.1,
+        "signed": false,
+        "diagnostic": true,
+        "unit": "W"
+      },
+      {
+        "titleZH": "MPPT路数",
+        "titleEN": "Device MPPTs",
+        "registers": [
+          "0x0012"
+        ],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 1,
+        "signed": false,
+        "mask": "0x0F00",
+        "shift": 8,
+        "unit": ""
+      },
+      {
+        "titleZH": "相数",
+        "titleEN": "Device Phases",
+        "registers": [
+          "0x0012"
+        ],
+        "interactionType": 1,
+        "parserRule": 1,
+        "inputRanges": [],
+        "ratio": 1,
+        "signed": false,
+        "mask": "0x000F",
+        "unit": ""
       },
       {
         "titleZH": "逆变器ID",
